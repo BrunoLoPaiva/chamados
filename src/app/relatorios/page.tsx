@@ -1,0 +1,355 @@
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
+import { startOfMonth, endOfMonth, format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { BarChart3, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import ExportCSVButton from "@/components/ExportCSVButton";
+import RelatoriosFilters from "@/components/RelatoriosFilters";
+
+export default async function RelatoriosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+}) {
+  const resolvedParams = await searchParams;
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/login");
+
+  const userId = Number((session.user as any).id);
+
+  // Autenticação e Nível de Acesso
+  const usuarioLogado = await prisma.usuario.findUnique({
+    where: { id: userId },
+    include: { departamentos: true },
+  });
+
+  const isAdmin = usuarioLogado?.perfil === "ADMIN";
+  const isDeptoAdmin = (session.user as any).isDeptoAdmin;
+  const meusDeptosIds =
+    usuarioLogado?.departamentos.map((d: any) => d.id) || [];
+
+  if (!isAdmin && !isDeptoAdmin) {
+    redirect("/dashboard");
+  }
+
+  // Listas auxiliares para os filtros (Somente ativos para o form)
+  const [departamentosAtivos, tecnicosAtivos] = await Promise.all([
+    prisma.departamento.findMany({ orderBy: { nome: "asc" } }),
+    prisma.usuario.findMany({
+      where: { perfil: { in: ["ADMIN", "TECNICO"] } },
+      orderBy: { nome: "asc" },
+    }),
+  ]);
+
+  // Construção do Filtro
+  const pInicio = resolvedParams?.inicio;
+  const pFim = resolvedParams?.fim;
+  const pDepto = resolvedParams?.depto ? Number(resolvedParams?.depto) : null;
+  const pTecnico = resolvedParams?.tecnico
+    ? Number(resolvedParams?.tecnico)
+    : null;
+
+  const inicioMes = pInicio ? parseISO(pInicio) : startOfMonth(new Date());
+  const fimMes = pFim ? parseISO(pFim) : endOfMonth(new Date());
+
+  // Ajuste do final do dia para contemplar o dia útil passado na UI
+  fimMes.setHours(23, 59, 59, 999);
+
+  const filterWhere: Record<string, unknown> = {
+    dataCriacao: { gte: inicioMes, lte: fimMes },
+  };
+
+  if (!isAdmin && meusDeptosIds.length > 0) {
+    filterWhere.departamentoDestinoId = { in: meusDeptosIds };
+  } else if (pDepto) {
+    filterWhere.departamentoDestinoId = pDepto;
+  }
+  if (pTecnico) filterWhere.tecnicoId = pTecnico;
+
+  const mesAtualNome =
+    format(inicioMes, "MMMM 'de' yyyy", { locale: ptBR }) +
+    (pFim ? ` até ${format(fimMes, "dd/MM/yyyy")}` : "");
+
+  type ChamadoComplete = {
+    id: number;
+    codigo: string;
+    status: string;
+    dataCriacao: Date;
+    dataAtendimento: Date | null;
+    dataVencimento: Date | null;
+    usuarioCriacao: { nome: string } | null;
+    tecnico: { nome: string } | null;
+    departamentoDestino: { nome: string } | null;
+    tipo: { nome: string; prioridade: string } | null;
+  };
+
+  const chamadosResult = await prisma.chamado.findMany({
+    where: filterWhere as any, // Prisma typed where query workaround for dynamic keys
+    include: {
+      tipo: true,
+      tecnico: true,
+      usuarioCriacao: true,
+      departamentoDestino: true,
+    },
+    orderBy: { dataCriacao: "desc" },
+  });
+
+  const chamados = chamadosResult as unknown as ChamadoComplete[];
+
+  // Cálculos de KPIs
+  const total = chamados.length;
+  const fechados = chamados.filter(
+    (c: ChamadoComplete) => c.status === "FECHADO",
+  );
+  const abertos = total - fechados.length;
+
+  const fechadosComData = fechados.filter(
+    (c: ChamadoComplete) => c.dataAtendimento,
+  );
+
+  // TMA (Tempo Médio de Atendimento) em Horas
+  const somaTMA = fechadosComData.reduce(
+    (acc: number, c: ChamadoComplete) =>
+      acc + (c.dataAtendimento!.getTime() - c.dataCriacao.getTime()),
+    0,
+  );
+  const tmaMs = fechadosComData.length ? somaTMA / fechadosComData.length : 0;
+  const tmaHoras = (tmaMs / (1000 * 60 * 60)).toFixed(1);
+
+  // SLA Violado
+  const slaNoPrazo = fechadosComData.filter(
+    (c: ChamadoComplete) =>
+      !c.dataVencimento || c.dataAtendimento! <= c.dataVencimento,
+  ).length;
+  const slaPorcentagem = fechadosComData.length
+    ? Math.round((slaNoPrazo / fechadosComData.length) * 100)
+    : 100;
+
+  // Preparando dados para Exportação
+  const exportData = chamados.map((c: ChamadoComplete) => ({
+    codigo: c.codigo,
+    status: c.status,
+    dataCriacao: c.dataCriacao,
+    usuarioCriacao: c.usuarioCriacao?.nome || "Sistema",
+    tecnico: c.tecnico?.nome || "Não atribuído",
+    departamento: c.departamentoDestino?.nome || "Desconhecido",
+    tipo: c.tipo?.nome || "Outros",
+    prioridade: c.tipo?.prioridade || "Média",
+    dataAtendimento: c.dataAtendimento,
+    dataVencimento: c.dataVencimento,
+  }));
+
+  return (
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6 md:p-12 transition-colors">
+      <div className="max-w-6xl mx-auto">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
+              Relatórios e Métricas
+            </h1>
+            <p className="text-neutral-500 dark:text-neutral-400 mt-1 capitalize">
+              Visão consolidada: {mesAtualNome}
+            </p>
+          </div>
+        </header>
+
+        <RelatoriosFilters
+          departamentos={departamentosAtivos.map((d) => ({
+            id: d.id,
+            nome: d.nome,
+          }))}
+          tecnicos={tecnicosAtivos.map((t) => ({ id: t.id, nome: t.nome }))}
+        />
+
+        {/* KPIs Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+            </div>
+            <h3 className="text-neutral-500 dark:text-neutral-400 text-sm font-medium">
+              Total de Chamados
+            </h3>
+            <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+              {total}
+            </p>
+            <p className="text-xs text-neutral-400 mt-2">
+              {abertos} pendentes / {fechados.length} concluídos
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-md">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+            </div>
+            <h3 className="text-neutral-500 dark:text-neutral-400 text-sm font-medium">
+              Resolvidos
+            </h3>
+            <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+              {total > 0 ? Math.round((fechados.length / total) * 100) : 0}%
+            </p>
+            <p className="text-xs text-neutral-400 mt-2">
+              Taxa de resolução no mês
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-md">
+                <Clock className="w-6 h-6" />
+              </div>
+            </div>
+            <h3 className="text-neutral-500 dark:text-neutral-400 text-sm font-medium">
+              Tempo Médio de Atendimento
+            </h3>
+            <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+              {tmaHoras}h
+            </p>
+            <p className="text-xs text-neutral-400 mt-2">
+              Tempo da abertura até a solução
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div
+                className={`p-3 rounded-md ${slaPorcentagem >= 80 ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"}`}
+              >
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+            </div>
+            <h3 className="text-neutral-500 dark:text-neutral-400 text-sm font-medium">
+              SLA no Prazo
+            </h3>
+            <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mt-1">
+              {slaPorcentagem}%
+            </p>
+            <p className="text-xs text-neutral-400 mt-2">
+              Atendimentos dentro do prazo
+            </p>
+          </div>
+        </div>
+
+        {/* Detalhamento e Listagem */}
+        <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
+              Volume do Mês Atual
+            </h2>
+            <ExportCSVButton data={exportData} mes={mesAtualNome} />
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-neutral-500 dark:text-neutral-400 uppercase bg-neutral-50 dark:bg-neutral-800/50">
+                <tr>
+                  <th className="px-4 py-3 font-semibold rounded-tl-lg">ID</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Abertura</th>
+                  <th className="px-4 py-3 font-semibold">Solicitante</th>
+                  <th className="px-4 py-3 font-semibold">Técnico</th>
+                  <th className="px-4 py-3 font-semibold">TMA (Horas)</th>
+                  <th className="px-4 py-3 font-semibold rounded-tr-lg">
+                    Prioridade / SLA
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {chamados.slice(0, 50).map((c) => {
+                  const resolucao = c.dataAtendimento
+                    ? (c.dataAtendimento.getTime() - c.dataCriacao.getTime()) /
+                      (1000 * 60 * 60)
+                    : null;
+                  const violouSla =
+                    c.dataVencimento && c.dataAtendimento
+                      ? c.dataAtendimento > c.dataVencimento
+                      : false;
+
+                  return (
+                    <tr
+                      key={c.id}
+                      className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-neutral-500 dark:text-neutral-400">
+                        #{c.codigo}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-bold ${c.status === "FECHADO" ? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400" : "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"}`}
+                        >
+                          {c.status.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">
+                        {format(c.dataCriacao, "dd 'de' MMM, HH:mm", {
+                          locale: ptBR,
+                        })}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-neutral-700 dark:text-neutral-300 truncate max-w-[150px]"
+                        title={c.usuarioCriacao?.nome}
+                      >
+                        {c.usuarioCriacao?.nome || "Sistema"}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300 truncate max-w-[150px]">
+                        {c.tecnico?.nome || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">
+                        {resolucao !== null ? (
+                          <span className="font-mono">
+                            {resolucao.toFixed(1)}h
+                          </span>
+                        ) : (
+                          <span className="text-neutral-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs uppercase font-bold text-neutral-600 dark:text-neutral-400">
+                            {c.tipo?.prioridade || "Média"}
+                          </span>
+                          {c.status === "FECHADO" &&
+                            c.dataVencimento &&
+                            (violouSla ? (
+                              <span
+                                className="w-2 h-2 rounded-full bg-red-500"
+                                title="Violou SLA"
+                              ></span>
+                            ) : (
+                              <span
+                                className="w-2 h-2 rounded-full bg-emerald-500"
+                                title="No Prazo"
+                              ></span>
+                            ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {chamados.length === 0 && (
+              <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
+                Nenhum chamado registrado neste período.
+              </div>
+            )}
+
+            {chamados.length > 50 && (
+              <div className="text-center py-4 border-t border-neutral-100 dark:border-neutral-800 text-xs text-neutral-500">
+                Exibindo os últimos 50 registros do mês. Exporte para CSV para
+                ver todos.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

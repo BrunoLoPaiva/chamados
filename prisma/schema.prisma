@@ -1,0 +1,167 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id              Int            @id @default(autoincrement())
+  guid            String         @unique
+  nome            String
+  login           String         @unique
+  perfil          String         @default("USUARIO") // ADMIN, TECNICO, USUARIO
+  ativo           Boolean        @default(true)
+  
+  // RELAÇÃO N:N - Um usuário pode estar em vários departamentos
+  departamentos   Departamento[] 
+  
+  chamadosCriados Chamado[]      @relation("Criador")
+  chamadosTecnico Chamado[]      @relation("Tecnico")
+  preventivas     Preventiva[]
+  interacoes      Interacao[]
+}
+
+model Local {
+  id          Int          @id @default(autoincrement())
+  nome        String
+  ativo       Boolean      @default(true)
+  
+  // Hierarquia (Super/Sub-Locais)
+  parentId    Int?
+  parent      Local?       @relation("LocalHierarchy", fields: [parentId], references: [id])
+  children    Local[]      @relation("LocalHierarchy")
+
+  chamados           Chamado[]
+  preventivas        Preventiva[]
+  deptoTiposLocal    DeptoTipo[]  @relation("DeptoTipoLocal")
+  deptoTiposSubLocal DeptoTipo[]  @relation("DeptoTipoSubLocal")
+}
+
+model Departamento {
+  id              Int           @id @default(autoincrement())
+  nome            String
+  ativo           Boolean       @default(true)
+  
+  // RELAÇÃO N:N
+  usuarios        Usuario[]
+  
+  deptoTipos      DeptoTipo[]   
+  chamadosDestino Chamado[]     @relation("DeptoDestino")
+  preventivasDest Preventiva[]
+}
+
+model TipoChamado {
+  id             Int           @id @default(autoincrement())
+  nome           String
+  ativo          Boolean       @default(true)
+  
+  // NOVOS CAMPOS PARA O SLA
+  prioridade     String        @default("Media") // Baixa, Media, Alta
+  tempoSlaHoras  Int           @default(24)      // Tempo em horas para o vencimento
+  
+  deptoTipos     DeptoTipo[]
+  chamados       Chamado[]
+  preventivas    Preventiva[]
+}
+
+model DeptoTipo {
+  id             Int          @id @default(autoincrement())
+  departamentoId Int
+  tipoId         Int
+  localId        Int?         // Local associado (opcional - se nulo, vale para qualquer local)
+  subLocalId     Int?         // Sub-local associado (opcional)
+
+  departamento   Departamento @relation(fields: [departamentoId], references: [id])
+  tipo           TipoChamado  @relation(fields: [tipoId], references: [id])
+  local          Local?       @relation("DeptoTipoLocal", fields: [localId], references: [id])
+  subLocal       Local?       @relation("DeptoTipoSubLocal", fields: [subLocalId], references: [id])
+}
+
+model Chamado {
+  id                    Int            @id @default(autoincrement())
+  codigo                String         @unique // Hash numérico de 10 dígitos
+  titulo                String
+  descricao             String
+  status                String         @default("SOLICITADO") 
+  
+  // Relacionamentos
+  localId               Int
+  tipoId                Int
+  departamentoDestinoId Int
+  usuarioCriacaoId      Int
+  tecnicoId             Int?           // Se preenchido, o chamado está atribuído a este técnico
+  
+  dataCriacao           DateTime       @default(now())
+  dataVencimento        DateTime?
+  dataAtendimento       DateTime?
+  solucao               String?
+  
+  local                 Local          @relation(fields: [localId], references: [id])
+  tipo                  TipoChamado    @relation(fields: [tipoId], references: [id])
+  departamentoDestino   Departamento   @relation("DeptoDestino", fields: [departamentoDestinoId], references: [id])
+  usuarioCriacao        Usuario        @relation("Criador", fields: [usuarioCriacaoId], references: [id])
+  tecnico               Usuario?       @relation("Tecnico", fields: [tecnicoId], references: [id])
+  
+  acoes                 ChamadoAcao[]
+  interacoes            Interacao[]
+  anexos                Anexo[]
+}
+
+model Anexo {
+  id          Int     @id @default(autoincrement())
+  nomeArquivo String
+  tipo        String
+  base64      String
+  chamadoId   Int
+  chamado     Chamado @relation(fields: [chamadoId], references: [id])
+}
+
+model Acao {
+  id          Int           @id @default(autoincrement())
+  descricao   String
+  tipoId      Int           
+  ativo       Boolean       @default(true)
+  chamados    ChamadoAcao[]
+}
+
+model ChamadoAcao {
+  id        Int     @id @default(autoincrement())
+  chamadoId Int
+  acaoId    Int
+  realizado Boolean @default(false)
+  chamado   Chamado @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
+  acao      Acao    @relation(fields: [acaoId], references: [id], onDelete: Cascade)
+}
+
+model Preventiva {
+  id              Int      @id @default(autoincrement())
+  titulo          String
+  descricao       String
+  frequenciaDias  Int
+  proximaExecucao DateTime
+  ativa           Boolean  @default(true)
+  
+  // O técnico e as configurações que vão assumir os chamados gerados por essa preventiva
+  tecnicoId             Int
+  tipoId                Int
+  localId               Int
+  departamentoDestinoId Int
+  
+  tecnico               Usuario      @relation(fields: [tecnicoId], references: [id])
+  tipo                  TipoChamado  @relation(fields: [tipoId], references: [id])
+  local                 Local        @relation(fields: [localId], references: [id])
+  departamentoDestino   Departamento @relation(fields: [departamentoDestinoId], references: [id])
+}
+
+model Interacao {
+  id        Int      @id @default(autoincrement())
+  chamadoId Int
+  usuarioId Int
+  texto     String
+  data      DateTime @default(now())
+  chamado   Chamado  @relation(fields: [chamadoId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+}
