@@ -168,7 +168,7 @@ export default async function ChamadoDetailsPage({
                         type="submit"
                         className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-md shadow-sm transition-colors"
                       >
-                        ✋ Assumir Chamado
+                        Atribuir Chamado
                       </button>
                     </form>
                   )}

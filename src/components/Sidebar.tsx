@@ -85,19 +85,18 @@ export default function Sidebar() {
     <>
       <nav className="hidden md:flex flex-col w-64 h-screen border-r border-brand-navy/20 bg-brand-navy fixed left-0 top-0 z-40 shadow-xl transition-colors">
         <div className="p-6">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-xl tracking-tight transition-colors">
-              <span className="text-white font-black text-2xl">
-                <Image
-                  src="/logo.png"
-                  width={200}
-                  height={80}
-                  sizes="100vw"
-                  className="w-full h-auto drop-shadow-sm"
-                  alt="logo"
-                />
-              </span>
-            </span>
+          <div className="flex items-center justify-center">
+            <div className="bg-white/95  rounded-xl shadow-lg w-full flex items-center justify-center border-4 border-[#F2B705] transition-transform hover:scale-105">
+              <Image
+                src="/logo.png"
+                width={180}
+                height={80}
+                sizes="100vw"
+                className="w-full h-auto max-w-[210x]"
+                alt="Logo HelpLog"
+                priority
+              />
+            </div>
           </div>
         </div>
 
