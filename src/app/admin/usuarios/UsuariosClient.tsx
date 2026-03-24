@@ -21,7 +21,6 @@ type Usuario = {
   id: number;
   nome: string;
   login: string;
-  email: string | null;
   perfil: string;
   ativo: boolean;
   departamentos: Departamento[];
@@ -82,8 +81,7 @@ export default function UsuariosClient({
     return usuarios.filter((user) => {
       const matchBusca =
         user.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        user.login.toLowerCase().includes(busca.toLowerCase()) ||
-        (user.email && user.email.toLowerCase().includes(busca.toLowerCase()));
+        user.login.toLowerCase().includes(busca.toLowerCase()) 
 
       const matchPerfil =
         filtroPerfil === "TODOS" || user.perfil === filtroPerfil;
