@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import Image from "next/image";
 import {
   LucideIcon,
   LayoutDashboard,
@@ -87,7 +88,14 @@ export default function Sidebar() {
           <div className="flex items-center gap-3">
             <span className="font-bold text-xl tracking-tight transition-colors">
               <span className="text-white font-black text-2xl">
-                Help<span className="text-brand-yellow">Me</span>
+                <Image
+                  src="/logo.png"
+                  width={200}
+                  height={80}
+                  sizes="100vw"
+                  className="w-full h-auto drop-shadow-sm"
+                  alt="logo"
+                />
               </span>
             </span>
           </div>
