@@ -367,12 +367,13 @@ export default function TicketsTable({
       </div>
 
       {/* ── Table */}
-      <div className="overflow-x-auto rounded-md border border-neutral-200  shadow-sm bg-white  animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-300">
+        {/* Adicionado table-fixed aqui */}
+        <table className="w-full text-left border-collapse table-fixed">
           {/* ── Head */}
           <thead className={isSplitView ? "hidden" : ""}>
-            <tr className="bg-neutral-50 /60 border-b border-neutral-200 ">
-              {/* Checkbox */}
+            <tr className="bg-neutral-50 border-b border-neutral-200">
+              {/* Checkbox: Largura fixa w-10 */}
               <th
                 className={`w-10 px-3 py-2 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
               >
@@ -383,10 +384,12 @@ export default function TicketsTable({
                     if (el) el.indeterminate = someSelected && !allSelected;
                   }}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded border-neutral-300  accent-brand-navy cursor-pointer"
+                  className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer"
                 />
               </th>
-              <th className="px-3 py-2">
+
+              {/* Código: Largura fixa w-[90px] */}
+              <th className="w-[90px] px-3 py-2">
                 <SortableHeader
                   field="codigo"
                   label="Código"
@@ -395,7 +398,9 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
-              <th className="px-3 py-2 min-w-[220px]">
+
+              {/* Título: Ocupa todo o espaço restante com w-full */}
+              <th className="w-full px-3 py-2">
                 <SortableHeader
                   field="titulo"
                   label="Título"
@@ -404,8 +409,10 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
+
+              {/* Escondendo colunas menos importantes em telas menores para dar espaço ao Título */}
               {!isSplitView && (
-                <th className="px-3 py-2">
+                <th className="w-[80px] px-3 py-2 hidden sm:table-cell">
                   <SortableHeader
                     field="prioridade"
                     label="Prior."
@@ -416,7 +423,7 @@ export default function TicketsTable({
                 </th>
               )}
               {!isSplitView && (
-                <th className="px-3 py-2">
+                <th className="w-[120px] px-3 py-2 hidden lg:table-cell">
                   <SortableHeader
                     field="local"
                     label="Local"
@@ -427,7 +434,7 @@ export default function TicketsTable({
                 </th>
               )}
               {!isSplitView && (
-                <th className="px-3 py-2">
+                <th className="w-[120px] px-3 py-2 hidden md:table-cell">
                   <SortableHeader
                     field="solicitante"
                     label="Solicitante"
@@ -437,7 +444,8 @@ export default function TicketsTable({
                   />
                 </th>
               )}
-              <th className="px-3 py-2">
+
+              <th className="w-[130px] px-3 py-2">
                 <SortableHeader
                   field="status"
                   label="Status"
@@ -446,8 +454,9 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
+
               {!isSplitView && (
-                <th className="px-3 py-2">
+                <th className="w-[100px] px-3 py-2 hidden xl:table-cell">
                   <SortableHeader
                     field="dataCriacao"
                     label="Abertura"
@@ -457,7 +466,8 @@ export default function TicketsTable({
                   />
                 </th>
               )}
-              <th className="px-3 py-2">
+
+              <th className="w-[110px] px-3 py-2 hidden sm:table-cell">
                 <SortableHeader
                   field="dataVencimento"
                   label="SLA / Venc."
@@ -466,23 +476,22 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
+
               {/* Link column */}
               <th className={`w-10 px-3 py-2 ${isSplitView ? "hidden" : ""}`} />
             </tr>
           </thead>
 
           {/* ── Body */}
-          <tbody className="divide-y divide-neutral-100 ">
+          <tbody className="divide-y divide-neutral-100">
             {chamados.length === 0 && (
               <tr>
-                <td
-                  colSpan={10}
-                  className="text-center py-16 text-neutral-400 00"
-                >
+                <td colSpan={10} className="text-center py-16 text-neutral-400">
                   Nenhum chamado listado com estes critérios.
                 </td>
               </tr>
             )}
+
             {chamados.map((c, index) => {
               const isSelected = selected.has(c.id);
               const isActive = activeTicketCodigo === c.codigo;
@@ -490,47 +499,48 @@ export default function TicketsTable({
               const overdue =
                 c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
 
+              // ── SEU BLOCO IS SPLIT VIEW INTACTO ──
               if (isSplitView) {
                 return (
                   <tr
                     id={`ticket-row-${index}`}
                     key={c.id}
                     onClick={(e) => handleRowClick(e, c.codigo)}
-                    className={`group transition-all cursor-pointer outline-none block border-b border-neutral-100  p-3 ${
+                    className={`group transition-all cursor-pointer outline-none block border-b border-neutral-100 p-3 ${
                       isFocused
-                        ? "bg-brand-navy/5  ring-2 ring-inset ring-brand-navy/50"
+                        ? "bg-brand-navy/5 ring-2 ring-inset ring-brand-navy/50"
                         : ""
                     } ${
                       isActive
-                        ? "bg-brand-navy/10  border-l-4 border-l-brand-navy block"
+                        ? "bg-brand-navy/10 border-l-4 border-l-brand-navy block"
                         : isSelected
-                          ? "bg-brand-navy/5  border-l-4 border-l-transparent block"
-                          : "hover:bg-neutral-50  border-l-4 border-l-transparent block"
+                          ? "bg-brand-navy/5 border-l-4 border-l-transparent block"
+                          : "hover:bg-neutral-50 border-l-4 border-l-transparent block"
                     } ${c.status === "FECHADO" ? "opacity-60" : ""}`}
                   >
                     <td className="block border-none p-0 w-full min-w-0">
                       <div className="flex flex-col gap-1.5 w-full min-w-0">
                         <div className="flex items-center justify-between w-full min-w-0">
-                          <span className="font-mono tabular-nums text-xs font-bold text-neutral-500 ">
+                          <span className="font-mono tabular-nums text-xs font-bold text-neutral-500">
                             #{c.codigo}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${STATUS_CLASS[c.status] || STATUS_CLASS["FECHADO"]}`}
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
                           >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}
+                            ></span>
                             {STATUS_LABEL[c.status] || c.status}
                           </span>
                         </div>
                         <span
-                          className={`block truncate max-w-[200px] md:max-w-xs font-medium text-sm ${isActive ? "text-brand-navy  font-bold" : "text-neutral-900 "}`}
+                          className={`block truncate w-full font-medium text-sm ${isActive ? "text-brand-navy font-bold" : "text-neutral-900"}`}
                         >
                           {c.titulo}
                         </span>
                         <div className="flex items-center justify-between mt-1 min-w-0">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase whitespace-nowrap ${
-                              PRIORITY_CLASS[c.tipo?.prioridade || ""] ||
-                              PRIORITY_CLASS["Baixa"]
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
                           >
                             {c.tipo?.prioridade || "—"}
                           </span>
@@ -552,6 +562,7 @@ export default function TicketsTable({
                 );
               }
 
+              // ── SEU BLOCO STANDARD VIEW ──
               return (
                 <tr
                   id={`ticket-row-${index}`}
@@ -563,13 +574,12 @@ export default function TicketsTable({
                       : ""
                   } ${
                     isActive
-                      ? "bg-brand-navy/10  border-l-2 border-l-brand-navy"
+                      ? "bg-brand-navy/10 border-l-2 border-l-brand-navy"
                       : isSelected
-                        ? "bg-brand-navy/5  border-l-2 border-l-transparent"
-                        : "hover:bg-neutral-50  border-l-2 border-l-transparent"
+                        ? "bg-brand-navy/5 border-l-2 border-l-transparent"
+                        : "hover:bg-neutral-50 border-l-2 border-l-transparent"
                   } ${c.status === "FECHADO" ? "opacity-60" : ""}`}
                 >
-                  {/* Checkbox */}
                   <td
                     className={`${cellCls} text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
                   >
@@ -577,34 +587,31 @@ export default function TicketsTable({
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleOne(c.id)}
-                      className="w-4 h-4 rounded border-neutral-300  accent-brand-navy cursor-pointer"
+                      className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer"
                     />
                   </td>
 
-                  {/* Código */}
                   <td className={cellCls}>
                     <span
-                      className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md whitespace-nowrap ${isActive ? "bg-white  shadow-sm border border-brand-navy/30  text-brand-navy  font-bold" : "text-neutral-500  bg-neutral-100  border border-neutral-200 "}`}
+                      className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md whitespace-nowrap ${isActive ? "bg-white shadow-sm border border-brand-navy/30 text-brand-navy font-bold" : "text-neutral-500 bg-neutral-100 border border-neutral-200"}`}
                     >
                       #{c.codigo}
                     </span>
                   </td>
 
-                  {/* Título */}
-                  <td
-                    className={`${cellCls} max-w-[200px] md:max-w-xs min-w-0`}
-                  >
+                  {/* TÍTULO COM TRUNCATE E MAX-W-0 PARA NÃO EMPURRAR A TABELA */}
+                  <td className={`${cellCls} w-full max-w-0`}>
                     <span
-                      className={`block truncate font-medium transition-colors ${isActive ? "text-brand-navy  font-bold" : "text-neutral-900  group-hover:text-brand-navy "}`}
+                      className={`block truncate font-medium transition-colors ${isActive ? "text-brand-navy font-bold" : "text-neutral-900 group-hover:text-brand-navy"}`}
+                      title={c.titulo}
                     >
                       {c.titulo}
                     </span>
                   </td>
 
-                  {/* Prioridade */}
-                  <td className={cellCls}>
+                  <td className={`${cellCls} hidden sm:table-cell`}>
                     <span
-                      className={`text-[11px] uppercase tracking-wider ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
+                      className={`text-[11px] uppercase tracking-wider whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
                     >
                       {c.tipo?.prioridade === "Alta" && "↑ "}
                       {c.tipo?.prioridade === "Baixa" && "↓ "}
@@ -612,25 +619,32 @@ export default function TicketsTable({
                     </span>
                   </td>
 
-                  {/* Local */}
                   {!isSplitView && (
                     <td
-                      className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 `}
+                      className={`${cellCls} hidden lg:table-cell text-xs text-neutral-500`}
                     >
-                      {c.local?.nome || "—"}
+                      <span
+                        className="block truncate max-w-[120px]"
+                        title={c.local?.nome}
+                      >
+                        {c.local?.nome || "—"}
+                      </span>
                     </td>
                   )}
 
-                  {/* Solicitante */}
                   {!isSplitView && (
                     <td
-                      className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 `}
+                      className={`${cellCls} hidden md:table-cell text-xs text-neutral-500`}
                     >
-                      {c.usuarioCriacao?.nome || "Sistema"}
+                      <span
+                        className="block truncate max-w-[120px]"
+                        title={c.usuarioCriacao?.nome}
+                      >
+                        {c.usuarioCriacao?.nome || "Sistema"}
+                      </span>
                     </td>
                   )}
 
-                  {/* Status */}
                   <td className={cellCls}>
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
@@ -642,43 +656,40 @@ export default function TicketsTable({
                     </span>
                   </td>
 
-                  {/* Abertura */}
                   {!isSplitView && (
                     <td
-                      className={`${cellCls} whitespace-nowrap text-xs text-neutral-500  tabular-nums font-mono`}
+                      className={`${cellCls} hidden xl:table-cell whitespace-nowrap text-xs text-neutral-500 tabular-nums font-mono`}
                     >
                       {fmtDateShort(c.dataCriacao)}
                     </td>
                   )}
 
-                  {/* SLA / Vencimento */}
                   <td
-                    className={`${cellCls} whitespace-nowrap font-mono tabular-nums`}
+                    className={`${cellCls} hidden sm:table-cell whitespace-nowrap font-mono tabular-nums`}
                   >
                     {c.status === "FECHADO" ? (
-                      <span className="text-brand-green  flex items-center gap-1 text-xs font-medium">
+                      <span className="text-brand-green flex items-center gap-1 text-xs font-medium">
                         <CheckCheck className="w-3.5 h-3.5" />
                         {fmtDateShort(c.dataAtendimento)}
                       </span>
                     ) : overdue ? (
-                      <span className="inline-flex items-center gap-1 bg-red-50  text-red-700  border border-red-200  px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
+                      <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {fmtDate(c.dataVencimento)}
                       </span>
                     ) : (
-                      <span className="text-neutral-600  text-xs font-medium">
+                      <span className="text-neutral-600 text-xs font-medium">
                         {fmtDate(c.dataVencimento)}
                       </span>
                     )}
                   </td>
 
-                  {/* Link */}
                   <td
                     className={`${cellCls} text-center ${isSplitView ? "hidden" : ""}`}
                   >
                     <Link
                       href={`/chamado/${c.codigo}`}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-md text-neutral-400 hover:text-brand-navy  hover:bg-brand-navy/10 transition-all"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md text-neutral-400 hover:text-brand-navy hover:bg-brand-navy/10 transition-all"
                       title="Abrir chamado em tela cheia"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
