@@ -51,7 +51,9 @@ export default function NovoChamadoForm({
             return dt.subLocalId === effectiveLocalId;
           }
           // Aparece se o local pai bate (independente de sublocal estar ou não selecionado)
-          return dt.localId === parentLocalId || dt.localId === effectiveLocalId;
+          return (
+            dt.localId === parentLocalId || dt.localId === effectiveLocalId
+          );
         })
         .map((dt: any) => dt.tipo)
     : [];
@@ -74,7 +76,11 @@ export default function NovoChamadoForm({
 
     try {
       await createTicket(formData);
-      toast.success(isPreventiva ? "Preventiva criada com sucesso!" : "Chamado criado com sucesso!");
+      toast.success(
+        isPreventiva
+          ? "Preventiva criada com sucesso!"
+          : "Chamado criado com sucesso!",
+      );
       router.push("/dashboard");
     } catch (error) {
       console.error(error);
@@ -91,7 +97,7 @@ export default function NovoChamadoForm({
     <form action={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-sm font-semibold text-neutral-900  mb-2">
             Local / Categoria
           </label>
           <select
@@ -101,7 +107,7 @@ export default function NovoChamadoForm({
               setSubLocalId(""); // reseta o filho se trocar o pai
             }}
             required
-            className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-neutral-900 dark:text-neutral-100 bg-neutral-50 appearance-none transition-colors"
+            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 appearance-none transition-colors"
           >
             <option value="">Selecione a unidade principal...</option>
             {locaisRoots.map((l: any) => (
@@ -114,28 +120,28 @@ export default function NovoChamadoForm({
           {/* Segunda combobox caso o local pai exija sub-locais ex: (Praça pedágio -> P1) */}
           {subLocais.length > 0 && (
             <div className="mt-4 animate-in slide-in-from-top-2 fade-in duration-300">
-               <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-                 Sub-Local Especifico <span className="text-red-500">*</span>
-               </label>
-               <select
-                 value={subLocalId}
-                 onChange={(e) => setSubLocalId(e.target.value)}
-                 required
-                 className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md outline-none shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-neutral-900 dark:text-neutral-100 bg-white appearance-none transition-colors ring-1 ring-blue-500/50"
-               >
-                 <option value="">Selecione a parte interior/unidade...</option>
-                 {subLocais.map((sl: any) => (
-                   <option key={sl.id} value={sl.id}>
-                     ↳ {sl.nome}
-                   </option>
-                 ))}
-               </select>
+              <label className="block text-sm font-semibold text-neutral-900  mb-2">
+                Sub-Local Especifico <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={subLocalId}
+                onChange={(e) => setSubLocalId(e.target.value)}
+                required
+                className="block w-full px-4 py-3 border border-neutral-300  rounded-md outline-none shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-white appearance-none transition-colors ring-1 ring-blue-500/50"
+              >
+                <option value="">Selecione a parte interior/unidade...</option>
+                {subLocais.map((sl: any) => (
+                  <option key={sl.id} value={sl.id}>
+                    ↳ {sl.nome}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-sm font-semibold text-neutral-900  mb-2">
             Departamento de Destino
           </label>
           <select
@@ -146,7 +152,7 @@ export default function NovoChamadoForm({
               setDeptoId(e.target.value);
               setIsPreventiva(false); // Reseta a preventiva se mudar de departamento
             }}
-            className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-neutral-900 dark:text-neutral-100 bg-neutral-50 appearance-none transition-colors"
+            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 appearance-none transition-colors"
           >
             <option value="">Selecione a área...</option>
             {departamentos.map((d: any) => (
@@ -159,14 +165,14 @@ export default function NovoChamadoForm({
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+        <label className="block text-sm font-semibold text-neutral-900  mb-2">
           Tipo de Solicitação
         </label>
         <select
           name="tipoId"
           required
           disabled={!deptoId}
-          className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-neutral-900 dark:text-neutral-100 bg-neutral-50 appearance-none disabled:opacity-50 transition-colors"
+          className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 appearance-none disabled:opacity-50 transition-colors"
         >
           <option value="">
             {deptoId
@@ -182,53 +188,53 @@ export default function NovoChamadoForm({
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+        <label className="block text-sm font-semibold text-neutral-900  mb-2">
           Título do Problema
         </label>
         <input
           name="titulo"
           type="text"
           required
-          className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-neutral-900 dark:text-neutral-100 bg-neutral-50 transition-colors"
+          className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 transition-colors"
           placeholder="Ex: Impressora sem conexão na recepção"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+        <label className="block text-sm font-semibold text-neutral-900  mb-2">
           Descrição Detalhada
         </label>
         <textarea
           name="descricao"
           rows={4}
           required
-          className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-neutral-900 dark:text-neutral-100 bg-neutral-50 transition-colors"
+          className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 transition-colors"
           placeholder="Descreva os detalhes e contexto..."
         ></textarea>
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+        <label className="block text-sm font-semibold text-neutral-900  mb-2">
           Anexar Arquivo (Opcional)
         </label>
         <input
           name="anexo"
           type="file"
-          className="block w-full text-sm text-neutral-500 dark:text-neutral-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 border border-neutral-300 dark:border-neutral-700 rounded-md p-2 bg-neutral-50 dark:bg-neutral-900 transition-colors file:transition-colors"
+          className="block w-full text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-navy  file:text-neutral-100 hover:file:bg-brand-navy/90   border border-neutral-200  rounded-md p-2 bg-neutral-50  transition-colors file:transition-colors cursor-pointer"
         />
       </div>
 
       {/* ÁREA EXCLUSIVA DE PREVENTIVAS */}
       {pertenceAoDepto && (
-        <div className="p-5 border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-lg transition-colors">
+        <div className="p-5 border border-emerald-200  bg-emerald-50/50  rounded-lg transition-colors">
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
               type="checkbox"
               checked={isPreventiva}
               onChange={(e) => setIsPreventiva(e.target.checked)}
-              className="w-5 h-5 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500 dark:focus:ring-emerald-600 dark:ring-offset-neutral-900 focus:ring-2 dark:bg-neutral-800 dark:border-neutral-600 transition-colors"
+              className="w-5 h-5 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500   focus:ring-2   transition-colors"
             />
-            <span className="font-bold text-emerald-800 dark:text-emerald-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+            <span className="font-bold text-emerald-800  group-hover:text-emerald-700  transition-colors">
               Transformar em Preventiva (Gerar recorrentemente)
             </span>
           </label>
@@ -236,7 +242,7 @@ export default function NovoChamadoForm({
           {isPreventiva && (
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div>
-                <label className="block text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+                <label className="block text-sm font-semibold text-emerald-800  mb-2">
                   Frequência (Em dias)
                 </label>
                 <input
@@ -244,18 +250,18 @@ export default function NovoChamadoForm({
                   type="number"
                   min="1"
                   required={isPreventiva}
-                  className="block w-full px-4 py-3 border border-emerald-200 dark:border-emerald-800/50 rounded-md shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:bg-neutral-900 dark:text-neutral-100 bg-white transition-colors"
+                  className="block w-full px-4 py-3 border border-emerald-200  rounded-md shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500   bg-white transition-colors"
                   placeholder="Ex: 30"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+                <label className="block text-sm font-semibold text-emerald-800  mb-2">
                   Técnico Padrão Responsável
                 </label>
                 <select
                   name="tecnicoId"
                   required={isPreventiva}
-                  className="block w-full px-4 py-3 border border-emerald-200 dark:border-emerald-800/50 rounded-md shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:bg-neutral-900 dark:text-neutral-100 bg-white appearance-none transition-colors"
+                  className="block w-full px-4 py-3 border border-emerald-200  rounded-md shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500   bg-white appearance-none transition-colors"
                 >
                   <option value="">Atribuir para...</option>
                   {deptoSelecionado?.usuarios.map((u: any) => (
@@ -270,17 +276,17 @@ export default function NovoChamadoForm({
         </div>
       )}
 
-      <div className="pt-6 mt-6 border-t border-neutral-200 dark:border-neutral-800 flex justify-end gap-3">
+      <div className="pt-6 mt-6 border-t border-neutral-200  flex justify-end gap-3">
         <Link
           href="/dashboard"
-          className="px-5 py-2.5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:hover:text-neutral-200 rounded-md font-semibold transition-colors"
+          className="px-5 py-2.5 text-neutral-600  hover:text-neutral-900 hover:bg-neutral-100   rounded-md font-semibold transition-colors"
         >
           Cancelar
         </Link>
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-sm flex items-center gap-2 disabled:opacity-70 transition-all font-sans"
+          className="px-6 py-2.5 bg-brand-navy text-white rounded-md hover:bg-brand-navy/90 font-bold shadow-sm flex items-center gap-2 disabled:opacity-70 transition-all font-sans"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {loading ? "Processando..." : "Registrar"}

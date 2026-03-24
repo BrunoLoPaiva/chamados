@@ -17,15 +17,21 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore inner input typing
-      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) {
+      if (
+        ["INPUT", "TEXTAREA", "SELECT"].includes(
+          (e.target as HTMLElement).tagName,
+        )
+      ) {
         return;
       }
       if (e.key.toLowerCase() === "r") {
         e.preventDefault();
-        const textarea = document.querySelector('textarea[name="solucao"]') as HTMLTextAreaElement;
+        const textarea = document.querySelector(
+          'textarea[name="solucao"]',
+        ) as HTMLTextAreaElement;
         if (textarea) {
           textarea.focus();
-          textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          textarea.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
     };
@@ -34,8 +40,8 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
   }, []);
 
   return (
-    <div className="mt-8 bg-neutral-50 dark:bg-neutral-800/50 p-6 md:p-8 rounded-lg border border-neutral-200 dark:border-neutral-700/50 transition-colors">
-      <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-6 flex items-center gap-2 transition-colors">
+    <div className="mt-8 bg-neutral-50 /50 p-6 md:p-8 rounded-lg border border-neutral-200  transition-colors">
+      <h3 className="text-xl font-bold text-neutral-900  mb-6 flex items-center gap-2 transition-colors">
         <CheckCircle2 className="w-6 h-6 text-blue-600" />
         Concluir Atendimento
       </h3>
@@ -45,10 +51,10 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
 
         {chamado.acoes && chamado.acoes.length > 0 && (
           <div>
-            <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3 transition-colors">
+            <label className="block text-sm font-semibold text-neutral-900  mb-3 transition-colors">
               Checklist de Ações (Marque o que foi feito)
             </label>
-            <div className="space-y-3 bg-white dark:bg-neutral-900 p-4 rounded-md border border-neutral-200 dark:border-neutral-700 transition-colors">
+            <div className="space-y-3 bg-white  p-4 rounded-md border border-neutral-200  transition-colors">
               {chamado.acoes.map((ca: any) => (
                 <label
                   key={ca.id}
@@ -57,9 +63,9 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
                   <input
                     type="checkbox"
                     name={`acao_${ca.id}`}
-                    className="mt-0.5 w-5 h-5 text-blue-600 border-neutral-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-neutral-900 focus:ring-2 dark:bg-neutral-800 dark:border-neutral-700 cursor-pointer transition-colors"
+                    className="mt-0.5 w-5 h-5 text-blue-600 border-neutral-300 rounded focus:ring-blue-500   focus:ring-2   cursor-pointer transition-colors"
                   />
-                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-neutral-100 transition-colors">
+                  <span className="text-sm font-medium text-neutral-700  group-hover:text-neutral-900  transition-colors">
                     {ca.acao.descricao}
                   </span>
                 </label>
@@ -69,30 +75,30 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
         )}
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2 transition-colors">
+          <label className="block text-sm font-semibold text-neutral-900  mb-2 transition-colors">
             Resumo da Solução
           </label>
           <textarea
             name="solucao"
             required
             rows={4}
-            className="block w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 outline-none dark:bg-neutral-900 dark:text-neutral-100 bg-white transition-colors"
+            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 outline-none   bg-white transition-colors"
             placeholder="Descreva o que foi realizado para solucionar o problema..."
           ></textarea>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2 transition-colors">
+          <label className="block text-sm font-semibold text-neutral-900  mb-2 transition-colors">
             Anexar Evidência (Opcional)
           </label>
           <input
             name="anexo"
             type="file"
-            className="block w-full text-sm text-neutral-500 dark:text-neutral-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 border border-neutral-300 dark:border-neutral-700 rounded-md p-2 bg-white dark:bg-neutral-900 transition-colors"
+            className="block w-full text-sm text-neutral-500  file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100   border border-neutral-300  rounded-md p-2 bg-white  transition-colors"
           />
         </div>
 
-        <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex justify-end transition-colors">
+        <div className="pt-4 border-t border-neutral-200  flex justify-end transition-colors">
           <button
             type="submit"
             disabled={loading}

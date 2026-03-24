@@ -1,270 +1,520 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
+import { Plus, FileText, Filter as FilterIcon, X } from "lucide-react";
+import DashboardFilters from "@/components/DashboardFilters";
+import TicketsTable from "@/components/TicketsTable";
+import TicketDetailsPanel from "@/components/TicketDetailsPanel";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Filter, X, ChevronDown, ChevronUp } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
-
-type Option = { id: number; nome: string };
-
-export default function DashboardFilters({ 
-  locais, 
-  usuarios 
-}: { 
-  locais: Option[]; 
-  usuarios: Option[]; 
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/login");
 
-  const [isExpanded, setIsExpanded] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const userId = Number((session.user as any).id);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignorar se o usuário já estiver num input
-      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) {
-        return;
-      }
+  // Next.js 15: searchParams must be awaited
+  const resolvedParams = await searchParams;
+  const q = resolvedParams?.q || "";
+  const statusFilter = resolvedParams?.status || "";
 
-      if (e.key === "/") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      } else if (e.key.toLowerCase() === "c") {
-        e.preventDefault();
-        router.push("/chamado/novo");
-      }
-    };
+  const localId = resolvedParams?.localId || "";
+  const criadorId = resolvedParams?.criadorId || "";
+  const tecnicoId = resolvedParams?.tecnicoId || "";
+  const dtAberturaDe = resolvedParams?.dtAberturaDe || "";
+  const dtAberturaAte = resolvedParams?.dtAberturaAte || "";
+  const dtVencimentoDe = resolvedParams?.dtVencimentoDe || "";
+  const dtVencimentoAte = resolvedParams?.dtVencimentoAte || "";
+  const dtFechamentoDe = resolvedParams?.dtFechamentoDe || "";
+  const dtFechamentoAte = resolvedParams?.dtFechamentoAte || "";
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
+  const sort =
+    (resolvedParams?.sort as
+      | "codigo"
+      | "titulo"
+      | "prioridade"
+      | "local"
+      | "solicitante"
+      | "status"
+      | "dataCriacao"
+      | "dataVencimento") || "dataCriacao";
+  const dir = (resolvedParams?.dir as "asc" | "desc") || "desc";
+  const activeTicket = resolvedParams?.activeTicket || null;
+  const isFilterOpen = resolvedParams?.filters === "open";
 
-  // States
-  const [q, setQ] = useState(searchParams.get("q") || "");
-  const [status, setStatus] = useState(searchParams.get("status") || "");
-  const [localId, setLocalId] = useState(searchParams.get("localId") || "");
-  const [criadorId, setCriadorId] = useState(searchParams.get("criadorId") || "");
-  const [tecnicoId, setTecnicoId] = useState(searchParams.get("tecnicoId") || "");
-  
-  const [dtAberturaDe, setDtAberturaDe] = useState(searchParams.get("dtAberturaDe") || "");
-  const [dtAberturaAte, setDtAberturaAte] = useState(searchParams.get("dtAberturaAte") || "");
-  const [dtVencimentoDe, setDtVencimentoDe] = useState(searchParams.get("dtVencimentoDe") || "");
-  const [dtVencimentoAte, setDtVencimentoAte] = useState(searchParams.get("dtVencimentoAte") || "");
-  const [dtFechamentoDe, setDtFechamentoDe] = useState(searchParams.get("dtFechamentoDe") || "");
-  const [dtFechamentoAte, setDtFechamentoAte] = useState(searchParams.get("dtFechamentoAte") || "");
-
-  const updateFilters = useCallback(() => {
-    const params = new URLSearchParams();
-    
-    // Always reset to page 1 when filtering
-    params.set("p", "1");
-
-    if (q) params.set("q", q);
-    if (status) params.set("status", status);
-    if (localId) params.set("localId", localId);
-    if (criadorId) params.set("criadorId", criadorId);
-    if (tecnicoId) params.set("tecnicoId", tecnicoId);
-    
-    if (dtAberturaDe) params.set("dtAberturaDe", dtAberturaDe);
-    if (dtAberturaAte) params.set("dtAberturaAte", dtAberturaAte);
-    if (dtVencimentoDe) params.set("dtVencimentoDe", dtVencimentoDe);
-    if (dtVencimentoAte) params.set("dtVencimentoAte", dtVencimentoAte);
-    if (dtFechamentoDe) params.set("dtFechamentoDe", dtFechamentoDe);
-    if (dtFechamentoAte) params.set("dtFechamentoAte", dtFechamentoAte);
-
-    router.push(`/dashboard?${params.toString()}`);
-  }, [
-    q, status, localId, criadorId, tecnicoId, 
-    dtAberturaDe, dtAberturaAte, dtVencimentoDe, dtVencimentoAte, dtFechamentoDe, dtFechamentoAte, 
-    router
+  // Busca do combo list data limitando colunas para não pesar
+  const [locaisList, usuariosList] = await Promise.all([
+    prisma.local.findMany({
+      where: { ativo: true },
+      select: { id: true, nome: true, parentId: true },
+      orderBy: { nome: "asc" },
+    }),
+    prisma.usuario.findMany({
+      where: { ativo: true },
+      select: { id: true, nome: true },
+      orderBy: { nome: "asc" },
+    }),
   ]);
 
-  const clearFilters = () => {
-    setQ("");
-    setStatus("");
-    setLocalId("");
-    setCriadorId("");
-    setTecnicoId("");
-    setDtAberturaDe("");
-    setDtAberturaAte("");
-    setDtVencimentoDe("");
-    setDtVencimentoAte("");
-    setDtFechamentoDe("");
-    setDtFechamentoAte("");
-    router.push("/dashboard");
+  // Busca o usuário logado para descobrir seus departamentos e nível de acesso
+  const usuarioLogado = await prisma.usuario.findUnique({
+    where: { id: userId },
+    include: { departamentos: true },
+  });
+
+  const isAdmin = usuarioLogado?.perfil === "ADMIN";
+  const isDeptoAdmin = (session.user as any).isDeptoAdmin;
+  const meusDeptosIds =
+    usuarioLogado?.departamentos.map((d: any) => d.id) || [];
+
+  const hasAdvancedFilterActive = !!(
+    localId ||
+    criadorId ||
+    tecnicoId ||
+    dtAberturaDe ||
+    dtAberturaAte ||
+    dtVencimentoDe ||
+    dtVencimentoAte ||
+    dtFechamentoDe ||
+    dtFechamentoAte
+  );
+
+  const showTabs = !hasAdvancedFilterActive && !q && !statusFilter;
+
+  const triagemWhere = {
+    status: "SOLICITADO",
+    tecnicoId: null,
+    ...(isAdmin ? {} : { departamentoDestinoId: { in: meusDeptosIds } }),
   };
 
-  const hasAdvancedFilters = localId || criadorId || tecnicoId || dtAberturaDe || dtAberturaAte || dtVencimentoDe || dtVencimentoAte || dtFechamentoDe || dtFechamentoAte;
-  const hasAnyFilter = q || status || hasAdvancedFilters;
+  const countTriagem = showTabs
+    ? await prisma.chamado.count({ where: triagemWhere })
+    : 0;
+  const activeTab =
+    resolvedParams?.tab || (countTriagem > 0 ? "triagem" : "atendimentos");
+
+  // 2. QUERY BASE DE ATENDIMENTOS:
+  let atendimentosWhere: any = {};
+
+  if (statusFilter) {
+    atendimentosWhere.status = statusFilter;
+  } else if (showTabs) {
+    atendimentosWhere.status = {
+      in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
+    };
+  }
+
+  if (q || statusFilter || hasAdvancedFilterActive || isDeptoAdmin || isAdmin) {
+    if (isAdmin) {
+      // Admin vê tudo na busca
+    } else if (isDeptoAdmin) {
+      // Admin de depto vê tudo de seus deptos
+      atendimentosWhere.departamentoDestinoId = { in: meusDeptosIds };
+    } else {
+      // Tecnico normal só vê o que é dele ou que ele mesmo criou
+      atendimentosWhere.OR = [
+        { tecnicoId: userId },
+        { usuarioCriacaoId: userId },
+      ];
+    }
+  } else {
+    // Normal users ONLY see their created or assigned tickets on the "Atendimentos" default view
+    atendimentosWhere.OR = [
+      { tecnicoId: userId },
+      { usuarioCriacaoId: userId },
+    ];
+  }
+
+  if (q) {
+    atendimentosWhere = {
+      ...atendimentosWhere,
+      OR: [
+        ...(atendimentosWhere.OR || []),
+        { titulo: { contains: q } },
+        { codigo: { contains: q.replace("#", "") } },
+      ],
+    };
+  }
+
+  // Rest of Advanced Filters
+  if (localId) atendimentosWhere.localId = Number(localId);
+  if (criadorId) atendimentosWhere.usuarioCriacaoId = Number(criadorId);
+  if (tecnicoId) atendimentosWhere.tecnicoId = Number(tecnicoId);
+
+  // Date Filters
+  if (dtAberturaDe || dtAberturaAte) {
+    atendimentosWhere.dataCriacao = {};
+    if (dtAberturaDe)
+      atendimentosWhere.dataCriacao.gte = new Date(
+        `${dtAberturaDe}T00:00:00.000Z`,
+      );
+    if (dtAberturaAte)
+      atendimentosWhere.dataCriacao.lte = new Date(
+        `${dtAberturaAte}T23:59:59.999Z`,
+      );
+  }
+
+  if (dtVencimentoDe || dtVencimentoAte) {
+    atendimentosWhere.dataVencimento = {};
+    if (dtVencimentoDe)
+      atendimentosWhere.dataVencimento.gte = new Date(
+        `${dtVencimentoDe}T00:00:00.000Z`,
+      );
+    if (dtVencimentoAte)
+      atendimentosWhere.dataVencimento.lte = new Date(
+        `${dtVencimentoAte}T23:59:59.999Z`,
+      );
+  }
+
+  if (dtFechamentoDe || dtFechamentoAte) {
+    atendimentosWhere.dataAtendimento = {};
+    if (dtFechamentoDe)
+      atendimentosWhere.dataAtendimento.gte = new Date(
+        `${dtFechamentoDe}T00:00:00.000Z`,
+      );
+    if (dtFechamentoAte)
+      atendimentosWhere.dataAtendimento.lte = new Date(
+        `${dtFechamentoAte}T23:59:59.999Z`,
+      );
+  }
+
+  const page = Math.max(1, Number(resolvedParams?.p || 1));
+  const take = 25; // Aumentado para 25 por página
+  const skip = (page - 1) * take;
+
+  let chamadosListagem: any[] = [];
+  let totalListagem = 0;
+
+  // Mapeamento de ordenação para Prisma
+  let orderByClause: any = {};
+  if (sort === "codigo") orderByClause = { codigo: dir };
+  else if (sort === "titulo") orderByClause = { titulo: dir };
+  else if (sort === "status") orderByClause = { status: dir };
+  else if (sort === "dataCriacao") orderByClause = { dataCriacao: dir };
+  else if (sort === "dataVencimento") orderByClause = { dataVencimento: dir };
+  else if (sort === "prioridade") orderByClause = { tipo: { prioridade: dir } };
+  else if (sort === "local") orderByClause = { local: { nome: dir } };
+  else if (sort === "solicitante")
+    orderByClause = { usuarioCriacao: { nome: dir } };
+
+  if (showTabs && activeTab === "triagem") {
+    [chamadosListagem, totalListagem] = await Promise.all([
+      prisma.chamado.findMany({
+        where: triagemWhere,
+        include: {
+          usuarioCriacao: true,
+          tipo: true,
+          local: true,
+          departamentoDestino: true,
+        },
+        orderBy:
+          Object.keys(orderByClause).length > 0
+            ? orderByClause
+            : { dataCriacao: "asc" },
+        take,
+        skip,
+      }),
+      prisma.chamado.count({ where: triagemWhere }),
+    ]);
+  } else {
+    [chamadosListagem, totalListagem] = await Promise.all([
+      prisma.chamado.findMany({
+        where: atendimentosWhere,
+        include: { usuarioCriacao: true, tipo: true, local: true },
+        orderBy:
+          Object.keys(orderByClause).length > 0
+            ? orderByClause
+            : { dataCriacao: "desc" },
+        take,
+        skip,
+      }),
+      prisma.chamado.count({ where: atendimentosWhere }),
+    ]);
+  }
+
+  // 3. BUSCA DO CHAMADO ATIVO SE HOUVER
+  let chamadoAtivoCompleto: any = null;
+  if (activeTicket) {
+    chamadoAtivoCompleto = await prisma.chamado.findUnique({
+      where: { codigo: activeTicket },
+      include: {
+        usuarioCriacao: true,
+        tecnico: true,
+        departamentoDestino: { include: { usuarios: true } },
+        local: true,
+        tipo: true,
+        anexos: true,
+        acoes: { include: { acao: true } },
+        interacoes: { include: { usuario: true }, orderBy: { data: "asc" } },
+      },
+    });
+  }
+
+  const totalPages = Math.max(1, Math.ceil(totalListagem / take));
+
+  const buildUrl = (p: number, overwriteTab?: string) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set("q", q);
+    if (statusFilter) sp.set("status", statusFilter);
+    if (sort !== "dataCriacao") sp.set("sort", sort);
+    if (dir !== "desc") sp.set("dir", dir);
+    if (overwriteTab) {
+      sp.set("tab", overwriteTab);
+    } else if (activeTab === "triagem" && showTabs) {
+      sp.set("tab", "triagem");
+    }
+    sp.set("p", String(p));
+    return `/dashboard?${sp.toString()}`;
+  };
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 md:p-6 mb-8 shadow-sm transition-all duration-300">
-      {/* Top Bar - Quick Filters */}
-      <div className="flex flex-col md:flex-row gap-4 relative">
-        <div className="flex-1 relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && updateFilters()}
-            placeholder="Buscar chamado por #hash ou título..."
-            className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm transition-colors"
-          />
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="flex-1 md:flex-none px-4 py-2.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm appearance-none md:min-w-[180px] transition-colors"
-          >
-            <option value="">Status (Todos)</option>
-            <option value="SOLICITADO">Solicitado</option>
-            <option value="EM_ATENDIMENTO">Em Atendimento</option>
-            <option value="PENDENTE">Pendente / Aguardando</option>
-            <option value="FECHADO">Fechado</option>
-          </select>
+    <div
+      className={`min-h-screen bg-[#F2F2F2] p-4 md:p-6 lg:p-6 transition-colors ${isFilterOpen ? "overflow-hidden" : ""}`}
+    >
+      <div
+        className={
+          activeTicket ? "mx-auto w-full max-w-[1600px]" : "max-w-6xl mx-auto"
+        }
+      >
+        {/* CABEÇALHO */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">
+              Painel de Chamados
+            </h1>
+            <p className="text-sm md:text-base text-neutral-500 mt-1">
+              Caixa de entrada operacional
+            </p>
+          </div>
 
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className={`flex items-center gap-2 px-4 py-2.5 border rounded-md font-medium text-sm transition-colors ${
-              hasAdvancedFilters 
-                ? "border-blue-500 text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10"
-                : "border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-            }`}
-          >
-            Avançado
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={updateFilters}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Filter className="w-4 h-4" />
-            <span className="hidden sm:inline">Filtrar</span>
-          </button>
-
-          {hasAnyFilter && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center justify-center w-[46px] h-[46px] bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 rounded-md transition-colors shrink-0"
-              title="Limpar todos os filtros"
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* BOTÃO DE FILTRO */}
+            <Link
+              href={
+                buildUrl(page) +
+                (buildUrl(page).includes("?") ? "&" : "?") +
+                (isFilterOpen ? "filters=closed" : "filters=open")
+              }
+              scroll={false}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-bold text-sm transition-all border ${
+                hasAdvancedFilterActive
+                  ? "border-brand-navy bg-brand-navy/10 text-brand-navy shadow-sm"
+                  : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 shadow-sm"
+              }`}
             >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
+              <FilterIcon className="w-4 h-4" />
+              Filtros Avançados
+              {hasAdvancedFilterActive && (
+                <span className="flex w-2 h-2 rounded-full bg-brand-navy absolute top-2 right-2 md:relative md:top-0 md:right-0"></span>
+              )}
+            </Link>
 
-      {/* Advanced Filters Expandable Area */}
-      {isExpanded && (
-        <div className="mt-6 pt-6 border-t border-neutral-100 dark:border-neutral-800/60 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* Relational Filters */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Atribuição</h3>
-              
-              <div>
-                <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Local / Unidade</label>
-                <select value={localId} onChange={e => setLocalId(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
-                  <option value="">Qualquer local</option>
-                  {/* Categorias Raiz sem sub-locais, ou pais com filhos */}
-                  {locais.filter(l => !(l as any).parentId).map(cat => {
-                    const filhos = locais.filter(l => (l as any).parentId === cat.id);
-                    if (filhos.length > 0) {
-                      return (
-                        <optgroup key={cat.id} label={cat.nome}>
-                          {filhos.map(sub => (
-                             <option key={sub.id} value={sub.id}>{sub.nome}</option>
-                          ))}
-                        </optgroup>
-                      );
-                    }
-                    
-                    // Sem filhos, rederinga como option normal
-                    return <option key={cat.id} value={cat.id}>{cat.nome}</option>;
-                  })}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Criado por</label>
-                <select value={criadorId} onChange={e => setCriadorId(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
-                  <option value="">Qualquer usuário</option>
-                  {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                </select>
-              </div>
+            {/* BOTÃO NOVO CHAMADO */}
+            <Link
+              href="/chamado/novo"
+              className="flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-2.5 bg-brand-navy text-white rounded-md hover:bg-brand-navy/90 shadow-sm transition-all font-bold"
+            >
+              <Plus className="w-4 h-4" />
+              Novo Chamado
+            </Link>
+          </div>
+        </header>
 
-              <div>
-                <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Técnico Atribuído</label>
-                <select value={tecnicoId} onChange={e => setTecnicoId(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
-                  <option value="">Qualquer técnico</option>
-                  {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                </select>
-              </div>
-            </div>
+        {/* BARRA DE CONTEXTO DE FILTROS ATIVOS (CHIPS) */}
+        {(hasAdvancedFilterActive || statusFilter) && (
+          <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm">
+            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider mr-2">
+              Filtros Ativos:
+            </span>
 
-            {/* Date Filters 1 */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Abertura e Vencimento</h3>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Abertura (De)</label>
-                  <input type="date" value={dtAberturaDe} onChange={e => setDtAberturaDe(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Abertura (Até)</label>
-                  <input type="date" value={dtAberturaAte} onChange={e => setDtAberturaAte(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
-                </div>
-              </div>
+            {statusFilter && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-brand-navy/10 text-brand-navy border border-brand-navy/20">
+                Status: {statusFilter}
+              </span>
+            )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Vencimento (De)</label>
-                  <input type="date" value={dtVencimentoDe} onChange={e => setDtVencimentoDe(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Vencimento (Até)</label>
-                  <input type="date" value={dtVencimentoAte} onChange={e => setDtVencimentoAte(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
-                </div>
-              </div>
-            </div>
+            {localId && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                Localização Filtrada
+              </span>
+            )}
 
-            {/* Date Filters 2 */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Conclusão</h3>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Fechamento (De)</label>
-                  <input type="date" value={dtFechamentoDe} onChange={e => setDtFechamentoDe(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">Fechamento (Até)</label>
-                  <input type="date" value={dtFechamentoAte} onChange={e => setDtFechamentoAte(e.target.value)} className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
-                </div>
-              </div>
-              
-              {/* Espaço vazio para manter o layout se necessário */}
-              <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800/50 flex justify-end">
-                <button
-                  onClick={updateFilters}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            {(dtAberturaDe || dtAberturaAte) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                Data de Abertura
+              </span>
+            )}
+
+            <Link
+              href="/dashboard"
+              scroll={false}
+              className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline ml-auto flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Limpar Todos
+            </Link>
+          </div>
+        )}
+
+        {/* ABAS (TABS) */}
+        {showTabs && (
+          <div className="flex space-x-4 mb-6 border-b border-neutral-300">
+            <Link
+              href={buildUrl(1, "triagem")}
+              className={`pb-3 text-sm font-bold transition-all border-b-2 ${
+                activeTab === "triagem"
+                  ? "border-brand-yellow text-brand-navy"
+                  : "border-transparent text-neutral-500 hover:text-neutral-800"
+              }`}
+            >
+              Solicitações
+              {countTriagem > 0 && (
+                <span
+                  className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === "triagem" ? "bg-brand-yellow text-brand-navy" : "bg-neutral-200 text-neutral-700"}`}
                 >
-                  <Filter className="w-4 h-4" />
-                  Aplicar Filtros Avançados
-                </button>
+                  {countTriagem}
+                </span>
+              )}
+            </Link>
+            <Link
+              href={buildUrl(1, "atendimentos")}
+              className={`pb-3 text-sm font-bold transition-all border-b-2 ${
+                activeTab === "atendimentos"
+                  ? "border-brand-navy text-brand-navy"
+                  : "border-transparent text-neutral-500 hover:text-neutral-800"
+              }`}
+            >
+              Meus Atendimentos
+            </Link>
+          </div>
+        )}
+
+        {/* TÍTULO DA LISTAGEM */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-neutral-800 flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {!showTabs
+                ? `Resultados da Busca`
+                : activeTab === "triagem"
+                  ? "Aguardando Atribuição"
+                  : "Seus Chamados em Andamento"}
+            </h2>
+            {totalListagem > 0 && (
+              <span className="text-sm font-bold text-neutral-500 bg-white px-3 py-1 rounded-full border border-neutral-200 shadow-sm">
+                Total: {totalListagem}
+              </span>
+            )}
+          </div>
+
+          <div
+            className={`grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 ${activeTicket ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
+          >
+            {/* Esquerda: A tabela (ou tela cheia) */}
+            <div
+              className={`${activeTicket ? "hidden lg:block lg:col-span-4 xl:col-span-3" : ""}`}
+            >
+              <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+                <TicketsTable
+                  chamados={chamadosListagem}
+                  sort={sort}
+                  dir={dir}
+                  isSplitView={!!activeTicket}
+                  activeTicketCodigo={activeTicket}
+                />
               </div>
+
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="flex justify-between md:justify-center items-center gap-2 md:gap-4 mt-6 bg-white p-2 rounded-md border border-neutral-200 shadow-sm">
+                  {page > 1 ? (
+                    <Link
+                      href={buildUrl(page - 1)}
+                      className="px-4 py-2 rounded-md text-sm font-bold hover:bg-neutral-100 transition-colors text-neutral-700"
+                    >
+                      Anterior
+                    </Link>
+                  ) : (
+                    <div className="px-4 py-2 border border-transparent text-sm opacity-50 font-bold text-neutral-400">
+                      Anterior
+                    </div>
+                  )}
+
+                  <span className="text-sm font-bold text-brand-navy whitespace-nowrap px-4 py-1.5 bg-brand-navy/5 rounded-md">
+                    Pág {page} de {totalPages}
+                  </span>
+
+                  {page < totalPages ? (
+                    <Link
+                      href={buildUrl(page + 1)}
+                      className="px-4 py-2 rounded-md text-sm font-bold hover:bg-neutral-100 transition-colors text-neutral-700"
+                    >
+                      Próxima
+                    </Link>
+                  ) : (
+                    <div className="px-4 py-2 border border-transparent text-sm opacity-50 font-bold text-neutral-400">
+                      Próxima
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            
+
+            {/* Direita: O ticket ativo (Master-Detail) */}
+            {activeTicket && chamadoAtivoCompleto && (
+              <div className="lg:col-span-8 xl:col-span-9 animate-in slide-in-from-right-8 duration-500">
+                <TicketDetailsPanel
+                  chamado={chamadoAtivoCompleto}
+                  currentUserId={userId}
+                  isAdmin={isAdmin}
+                  meusDeptosIds={meusDeptosIds}
+                />
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* OFFCANVAS FILTROS (Mantido no final do DOM) */}
+        {isFilterOpen && (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <Link
+              href={
+                buildUrl(page) +
+                (buildUrl(page).includes("?") ? "&" : "?") +
+                "filters=closed"
+              }
+              scroll={false}
+              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
+            />
+            <div className="relative w-full max-w-sm h-full bg-white border-l border-neutral-200 shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
+              <div className="flex items-center justify-between px-6 pb-4 border-b border-neutral-200">
+                <h2 className="text-lg font-bold text-brand-navy">
+                  Filtros Avançados
+                </h2>
+                <Link
+                  href={
+                    buildUrl(page) +
+                    (buildUrl(page).includes("?") ? "&" : "?") +
+                    "filters=closed"
+                  }
+                  scroll={false}
+                  className="p-2 -mr-2 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </Link>
+              </div>
+              <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                <DashboardFilters locais={locaisList} usuarios={usuariosList} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

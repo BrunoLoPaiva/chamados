@@ -15,7 +15,7 @@ export default function LayoutWrapper({
   }
 
   return (
-    <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950 md:pl-64 pb-16 md:pb-0 transition-all">
+    <div className="flex min-h-screen bg-neutral-50 50 md:pl-64 pb-16 md:pb-0 transition-all">
       <Sidebar />
       <main className="flex-1 w-full max-w-[100vw] md:max-w-none overflow-x-hidden min-h-screen">
         {children}

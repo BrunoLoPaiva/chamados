@@ -22,13 +22,13 @@ export default async function NovoChamadoPage() {
   // Busca os departamentos com seus tipos e usuários ativos (para a preventiva)
   const departamentos = await prisma.departamento.findMany({
     include: {
-      deptoTipos: { 
-        include: { 
+      deptoTipos: {
+        include: {
           tipo: true,
-        } 
+        },
       },
       usuarios: {
-        where: { ativo: true }
+        where: { ativo: true },
       },
     },
     orderBy: { nome: "asc" },
@@ -36,25 +36,25 @@ export default async function NovoChamadoPage() {
 
   const locais = await prisma.local.findMany({
     include: {
-      children: true
+      children: true,
     },
     where: { parentId: null }, // Somente locais raiz — os sub-locais virão via children
     orderBy: { nome: "asc" },
   });
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6 md:p-12 transition-colors">
+    <div className="min-h-screen bg-neutral-50 50 p-6 md:p-12 transition-colors">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
+          <h1 className="text-3xl font-bold text-neutral-900 0 tracking-tight">
             Novo Chamado
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-neutral-500  mt-1">
             Preencha os detalhes para abrir uma nova solicitação.
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-800 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
+        <div className="bg-white  rounded-lg shadow-sm border border-neutral-200  p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
           <NovoChamadoForm
             departamentos={departamentos}
             locais={locais}

@@ -4,9 +4,17 @@ import { useState, useCallback, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowUpDown, ArrowUp, ArrowDown,
-  ExternalLink, CheckCheck, UserCheck, AlertCircle, X,
-  AlignJustify, AlignCenter, AlignLeft,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
+  CheckCheck,
+  UserCheck,
+  AlertCircle,
+  X,
+  AlignJustify,
+  AlignCenter,
+  AlignLeft,
 } from "lucide-react";
 import { bulkAtribuirParaMim, bulkUpdateStatus } from "@/app/actions/tickets";
 
@@ -57,30 +65,55 @@ const STATUS_LABEL: Record<string, string> = {
   FECHADO: "Fechado",
 };
 
+const STATUS_UI: Record<
+  string,
+  { text: string; dot: string; bg: string; border: string }
+> = {
+  SOLICITADO: {
+    text: "text-neutral-600 ",
+    dot: "bg-brand-yellow",
+    bg: "bg-white ",
+    border: "border-neutral-200 ",
+  },
+  EM_ATENDIMENTO: {
+    text: "text-brand-navy  font-bold",
+    dot: "bg-brand-navy ",
+    bg: "bg-brand-navy/5 ",
+    border: "border-brand-navy/20 ",
+  },
+  PENDENTE: {
+    text: "text-brand-yellow  font-medium",
+    dot: "bg-brand-yellow",
+    bg: "bg-brand-yellow/5",
+    border: "border-brand-yellow/20",
+  },
+  FECHADO: {
+    text: "text-brand-green ",
+    dot: "bg-brand-green",
+    bg: "bg-brand-green/5",
+    border: "border-brand-green/20",
+  },
+};
+
 const STATUS_CLASS: Record<string, string> = {
   SOLICITADO:
-    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20",
-  EM_ATENDIMENTO:
-    "bg-blue-600 text-white dark:bg-blue-600 dark:text-white shadow-sm border border-blue-700 dark:border-blue-500",
+    "bg-brand-yellow/10 text-brand-yellow border border-brand-yellow/50",
+  EM_ATENDIMENTO: "bg-brand-navy text-white shadow-sm border border-brand-navy",
   PENDENTE:
-    "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-200/50 dark:border-purple-500/20",
-  FECHADO:
-    "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200/50 dark:border-neutral-700",
+    "bg-brand-yellow/10 text-brand-yellow border border-brand-yellow/50",
+  FECHADO: "bg-brand-green/10 text-brand-green border border-brand-green/50",
 };
 
 const PRIORITY_CLASS: Record<string, string> = {
-  Alta:
-    "bg-red-600 text-white dark:bg-red-600 dark:text-white shadow-sm border border-red-700",
-  Media:
-    "bg-orange-500 text-white dark:bg-orange-500 dark:text-white shadow-sm border border-orange-600",
-  Baixa:
-    "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700",
+  Alta: "text-red-600  font-bold",
+  Media: "text-brand-yellow  font-semibold",
+  Baixa: "text-neutral-500 ",
 };
 
 const DENSITY_ROW: Record<Density, string> = {
   compact: "py-1.5",
-  default: "py-3",
-  comfortable: "py-5",
+  default: "py-2",
+  comfortable: "py-3",
 };
 
 const DENSITY_ICONS = {
@@ -141,8 +174,8 @@ function SortableHeader({
     <button
       className={`flex items-center gap-1 group ${
         active
-          ? "text-blue-600 dark:text-blue-400"
-          : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+          ? "text-brand-navy "
+          : "text-neutral-500  hover:text-neutral-800 "
       } transition-colors`}
       onClick={() => onSort(field)}
     >
@@ -165,7 +198,13 @@ function SortableHeader({
 // ──────────────────────────────────────────────
 // Main Component
 // ──────────────────────────────────────────────
-export default function TicketsTable({ chamados, sort, dir, isSplitView, activeTicketCodigo }: Props) {
+export default function TicketsTable({
+  chamados,
+  sort,
+  dir,
+  isSplitView,
+  activeTicketCodigo,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -184,7 +223,11 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) {
+      if (
+        ["INPUT", "TEXTAREA", "SELECT"].includes(
+          (e.target as HTMLElement).tagName,
+        )
+      ) {
         return;
       }
 
@@ -222,19 +265,19 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
   const handleSort = useCallback(
     (field: SortField) => {
       const params = new URLSearchParams(searchParams.toString());
-      const newDir =
-        sort === field && dir === "asc" ? "desc" : "asc";
+      const newDir = sort === field && dir === "asc" ? "desc" : "asc";
       params.set("sort", field);
       params.set("dir", newDir);
       params.set("p", "1");
       router.push(`/dashboard?${params.toString()}`);
     },
-    [router, searchParams, sort, dir]
+    [router, searchParams, sort, dir],
   );
 
   // ── Selection helpers
   const allIds = chamados.map((c) => c.id);
-  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
 
   const toggleAll = () => {
@@ -257,10 +300,14 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
   // ── Row Click
   const handleRowClick = (e: React.MouseEvent, codigo: string) => {
     // If clicking on checkbox or its container, don't trigger row click
-    if ((e.target as HTMLElement).closest('input[type="checkbox"]') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('button')) {
+    if (
+      (e.target as HTMLElement).closest('input[type="checkbox"]') ||
+      (e.target as HTMLElement).closest("a") ||
+      (e.target as HTMLElement).closest("button")
+    ) {
       return;
     }
-    
+
     const params = new URLSearchParams(searchParams.toString());
     params.set("activeTicket", codigo);
     router.push(`/dashboard?${params.toString()}`);
@@ -293,13 +340,13 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
   };
 
   const rowPy = DENSITY_ROW[density];
-  const cellCls = `px-3 text-sm text-neutral-700 dark:text-neutral-300 ${rowPy}`;
+  const cellCls = `px-3 text-sm text-neutral-700  ${rowPy}`;
 
   return (
     <div className="relative">
       {/* ── Toolbar: Density Toggle */}
       <div className="flex items-center justify-end gap-1 mb-3">
-        <span className="text-xs text-neutral-400 dark:text-neutral-500 mr-2 font-medium">
+        <span className="text-xs text-neutral-400 00 mr-2 font-medium">
           Densidade:
         </span>
         {(["compact", "default", "comfortable"] as Density[]).map((d) => (
@@ -307,10 +354,10 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
             key={d}
             title={DENSITY_LABEL[d]}
             onClick={() => setDensity(d)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${
               density === d
-                ? "bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-500/15 dark:border-blue-500 dark:text-blue-400"
-                : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                ? "bg-brand-navy/10 border-brand-navy/50 text-brand-navy   "
+                : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50    "
             }`}
           >
             {DENSITY_ICONS[d]}
@@ -320,13 +367,15 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
       </div>
 
       {/* ── Table */}
-      <div className="overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-800 shadow-sm bg-white dark:bg-neutral-900 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="overflow-x-auto rounded-md border border-neutral-200  shadow-sm bg-white  animate-in fade-in slide-in-from-bottom-4 duration-300">
         <table className="w-full text-left border-collapse">
           {/* ── Head */}
-          <thead>
-            <tr className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700">
+          <thead className={isSplitView ? "hidden" : ""}>
+            <tr className="bg-neutral-50 /60 border-b border-neutral-200 ">
               {/* Checkbox */}
-              <th className={`w-10 px-3 py-3 text-center ${isSplitView ? 'hidden md:table-cell' : ''}`}>
+              <th
+                className={`w-10 px-3 py-2 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
+              >
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -334,49 +383,102 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                     if (el) el.indeterminate = someSelected && !allSelected;
                   }}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 accent-blue-600 cursor-pointer"
+                  className="w-4 h-4 rounded border-neutral-300  accent-brand-navy cursor-pointer"
                 />
               </th>
-              <th className="px-3 py-3">
-                <SortableHeader field="codigo" label="Código" currentSort={sort} currentDir={dir} onSort={handleSort} />
+              <th className="px-3 py-2">
+                <SortableHeader
+                  field="codigo"
+                  label="Código"
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
               </th>
-              <th className="px-3 py-3 min-w-[220px]">
-                <SortableHeader field="titulo" label="Título" currentSort={sort} currentDir={dir} onSort={handleSort} />
-              </th>
-              <th className="px-3 py-3">
-                <SortableHeader field="prioridade" label="Prior." currentSort={sort} currentDir={dir} onSort={handleSort} />
+              <th className="px-3 py-2 min-w-[220px]">
+                <SortableHeader
+                  field="titulo"
+                  label="Título"
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
               </th>
               {!isSplitView && (
-                <th className="px-3 py-3">
-                  <SortableHeader field="local" label="Local" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                <th className="px-3 py-2">
+                  <SortableHeader
+                    field="prioridade"
+                    label="Prior."
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
                 </th>
               )}
               {!isSplitView && (
-                <th className="px-3 py-3">
-                  <SortableHeader field="solicitante" label="Solicitante" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                <th className="px-3 py-2">
+                  <SortableHeader
+                    field="local"
+                    label="Local"
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
                 </th>
               )}
-              <th className="px-3 py-3">
-                <SortableHeader field="status" label="Status" currentSort={sort} currentDir={dir} onSort={handleSort} />
+              {!isSplitView && (
+                <th className="px-3 py-2">
+                  <SortableHeader
+                    field="solicitante"
+                    label="Solicitante"
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
+                </th>
+              )}
+              <th className="px-3 py-2">
+                <SortableHeader
+                  field="status"
+                  label="Status"
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
               </th>
               {!isSplitView && (
-                <th className="px-3 py-3">
-                  <SortableHeader field="dataCriacao" label="Abertura" currentSort={sort} currentDir={dir} onSort={handleSort} />
+                <th className="px-3 py-2">
+                  <SortableHeader
+                    field="dataCriacao"
+                    label="Abertura"
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
                 </th>
               )}
-              <th className="px-3 py-3">
-                <SortableHeader field="dataVencimento" label="SLA / Venc." currentSort={sort} currentDir={dir} onSort={handleSort} />
+              <th className="px-3 py-2">
+                <SortableHeader
+                  field="dataVencimento"
+                  label="SLA / Venc."
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
               </th>
               {/* Link column */}
-              <th className={`w-10 px-3 py-3 ${isSplitView ? 'hidden' : ''}`} />
+              <th className={`w-10 px-3 py-2 ${isSplitView ? "hidden" : ""}`} />
             </tr>
           </thead>
 
           {/* ── Body */}
-          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+          <tbody className="divide-y divide-neutral-100 ">
             {chamados.length === 0 && (
               <tr>
-                <td colSpan={10} className="text-center py-16 text-neutral-400 dark:text-neutral-500">
+                <td
+                  colSpan={10}
+                  className="text-center py-16 text-neutral-400 00"
+                >
                   Nenhum chamado listado com estes critérios.
                 </td>
               </tr>
@@ -385,7 +487,70 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
               const isSelected = selected.has(c.id);
               const isActive = activeTicketCodigo === c.codigo;
               const isFocused = focusedIndex === index;
-              const overdue = c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
+              const overdue =
+                c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
+
+              if (isSplitView) {
+                return (
+                  <tr
+                    id={`ticket-row-${index}`}
+                    key={c.id}
+                    onClick={(e) => handleRowClick(e, c.codigo)}
+                    className={`group transition-all cursor-pointer outline-none block border-b border-neutral-100  p-3 ${
+                      isFocused
+                        ? "bg-brand-navy/5  ring-2 ring-inset ring-brand-navy/50"
+                        : ""
+                    } ${
+                      isActive
+                        ? "bg-brand-navy/10  border-l-4 border-l-brand-navy block"
+                        : isSelected
+                          ? "bg-brand-navy/5  border-l-4 border-l-transparent block"
+                          : "hover:bg-neutral-50  border-l-4 border-l-transparent block"
+                    } ${c.status === "FECHADO" ? "opacity-60" : ""}`}
+                  >
+                    <td className="block border-none p-0 w-full min-w-0">
+                      <div className="flex flex-col gap-1.5 w-full min-w-0">
+                        <div className="flex items-center justify-between w-full min-w-0">
+                          <span className="font-mono tabular-nums text-xs font-bold text-neutral-500 ">
+                            #{c.codigo}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${STATUS_CLASS[c.status] || STATUS_CLASS["FECHADO"]}`}
+                          >
+                            {STATUS_LABEL[c.status] || c.status}
+                          </span>
+                        </div>
+                        <span
+                          className={`block truncate max-w-[200px] md:max-w-xs font-medium text-sm ${isActive ? "text-brand-navy  font-bold" : "text-neutral-900 "}`}
+                        >
+                          {c.titulo}
+                        </span>
+                        <div className="flex items-center justify-between mt-1 min-w-0">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase whitespace-nowrap ${
+                              PRIORITY_CLASS[c.tipo?.prioridade || ""] ||
+                              PRIORITY_CLASS["Baixa"]
+                            }`}
+                          >
+                            {c.tipo?.prioridade || "—"}
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
+                            {c.status === "FECHADO" ? (
+                              fmtDateShort(c.dataAtendimento)
+                            ) : overdue ? (
+                              <span className="text-red-600 font-bold">
+                                {fmtDateShort(c.dataVencimento)}
+                              </span>
+                            ) : (
+                              fmtDateShort(c.dataVencimento)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
 
               return (
                 <tr
@@ -393,35 +558,45 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                   key={c.id}
                   onClick={(e) => handleRowClick(e, c.codigo)}
                   className={`group transition-all cursor-pointer outline-none ${
-                    isFocused ? "ring-2 ring-inset ring-blue-500/50 bg-blue-50/30 dark:bg-blue-900/10" : ""
+                    isFocused
+                      ? "ring-2 ring-inset ring-brand-navy/50 bg-brand-navy/5 "
+                      : ""
                   } ${
                     isActive
-                      ? "bg-blue-50/80 dark:bg-blue-500/15 border-l-2 border-l-blue-600"
+                      ? "bg-brand-navy/10  border-l-2 border-l-brand-navy"
                       : isSelected
-                      ? "bg-blue-50/40 dark:bg-blue-500/10 border-l-2 border-l-transparent"
-                      : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40 border-l-2 border-l-transparent"
+                        ? "bg-brand-navy/5  border-l-2 border-l-transparent"
+                        : "hover:bg-neutral-50  border-l-2 border-l-transparent"
                   } ${c.status === "FECHADO" ? "opacity-60" : ""}`}
                 >
                   {/* Checkbox */}
-                  <td className={`${cellCls} text-center ${isSplitView ? 'hidden md:table-cell' : ''}`}>
+                  <td
+                    className={`${cellCls} text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
+                  >
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleOne(c.id)}
-                      className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 accent-blue-600 cursor-pointer"
+                      className="w-4 h-4 rounded border-neutral-300  accent-brand-navy cursor-pointer"
                     />
                   </td>
 
                   {/* Código */}
                   <td className={cellCls}>
-                    <span className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md whitespace-nowrap ${isActive ? 'bg-white dark:bg-neutral-900 shadow-sm border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 font-bold' : 'text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700'}`}>
+                    <span
+                      className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md whitespace-nowrap ${isActive ? "bg-white  shadow-sm border border-brand-navy/30  text-brand-navy  font-bold" : "text-neutral-500  bg-neutral-100  border border-neutral-200 "}`}
+                    >
                       #{c.codigo}
                     </span>
                   </td>
 
                   {/* Título */}
-                  <td className={`${cellCls} max-w-xs`}>
-                    <span className={`font-medium line-clamp-1 transition-colors ${isActive ? 'text-blue-700 dark:text-blue-400 font-bold' : 'text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
+                  <td
+                    className={`${cellCls} max-w-[200px] md:max-w-xs min-w-0`}
+                  >
+                    <span
+                      className={`block truncate font-medium transition-colors ${isActive ? "text-brand-navy  font-bold" : "text-neutral-900  group-hover:text-brand-navy "}`}
+                    >
                       {c.titulo}
                     </span>
                   </td>
@@ -429,25 +604,28 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                   {/* Prioridade */}
                   <td className={cellCls}>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase whitespace-nowrap ${
-                        PRIORITY_CLASS[c.tipo?.prioridade || ""] ||
-                        PRIORITY_CLASS["Baixa"]
-                      }`}
+                      className={`text-[11px] uppercase tracking-wider ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
                     >
+                      {c.tipo?.prioridade === "Alta" && "↑ "}
+                      {c.tipo?.prioridade === "Baixa" && "↓ "}
                       {c.tipo?.prioridade || "—"}
                     </span>
                   </td>
 
                   {/* Local */}
                   {!isSplitView && (
-                    <td className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 dark:text-neutral-400`}>
+                    <td
+                      className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 `}
+                    >
                       {c.local?.nome || "—"}
                     </td>
                   )}
 
                   {/* Solicitante */}
                   {!isSplitView && (
-                    <td className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 dark:text-neutral-400`}>
+                    <td
+                      className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 `}
+                    >
                       {c.usuarioCriacao?.nome || "Sistema"}
                     </td>
                   )}
@@ -455,45 +633,52 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                   {/* Status */}
                   <td className={cellCls}>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${
-                        STATUS_CLASS[c.status] || STATUS_CLASS["FECHADO"]
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
                     >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}
+                      ></span>
                       {STATUS_LABEL[c.status] || c.status}
                     </span>
                   </td>
 
                   {/* Abertura */}
                   {!isSplitView && (
-                    <td className={`${cellCls} whitespace-nowrap text-xs text-neutral-500 dark:text-neutral-400 tabular-nums`}>
+                    <td
+                      className={`${cellCls} whitespace-nowrap text-xs text-neutral-500  tabular-nums font-mono`}
+                    >
                       {fmtDateShort(c.dataCriacao)}
                     </td>
                   )}
 
                   {/* SLA / Vencimento */}
-                  <td className={`${cellCls} whitespace-nowrap tabular-nums`}>
+                  <td
+                    className={`${cellCls} whitespace-nowrap font-mono tabular-nums`}
+                  >
                     {c.status === "FECHADO" ? (
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <span className="text-brand-green  flex items-center gap-1 text-xs font-medium">
                         <CheckCheck className="w-3.5 h-3.5" />
                         {fmtDateShort(c.dataAtendimento)}
                       </span>
                     ) : overdue ? (
-                      <span className="text-xs text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 bg-red-50  text-red-700  border border-red-200  px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {fmtDate(c.dataVencimento)}
                       </span>
                     ) : (
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                      <span className="text-neutral-600  text-xs font-medium">
                         {fmtDate(c.dataVencimento)}
                       </span>
                     )}
                   </td>
 
                   {/* Link */}
-                  <td className={`${cellCls} text-center ${isSplitView ? 'hidden' : ''}`}>
+                  <td
+                    className={`${cellCls} text-center ${isSplitView ? "hidden" : ""}`}
+                  >
                     <Link
                       href={`/chamado/${c.codigo}`}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md text-neutral-400 hover:text-brand-navy  hover:bg-brand-navy/10 transition-all"
                       title="Abrir chamado em tela cheia"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -508,11 +693,11 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
 
       {/* ── Sticky Bulk Action Bar */}
       {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-6 duration-200">
-          <div className="flex items-center gap-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-2xl shadow-neutral-900/20 rounded-lg px-5 py-3">
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[45] animate-in fade-in slide-in-from-bottom-6 duration-200">
+          <div className="flex items-center gap-3 bg-white  border border-neutral-200  shadow-2xl shadow-neutral-900/20 rounded-md px-5 py-3">
             {/* Counter */}
-            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200 pr-3 border-r border-neutral-200 dark:border-neutral-700 min-w-max">
-              <span className="bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800  pr-3 border-r border-neutral-200  min-w-max">
+              <span className="bg-brand-navy text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center tabular-nums font-mono">
                 {selected.size}
               </span>
               selecionado{selected.size !== 1 ? "s" : ""}
@@ -522,19 +707,19 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
             <button
               onClick={handleBulkAtribuir}
               disabled={isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md bg-brand-navy text-white hover:bg-brand-navy/90 disabled:opacity-50 transition-colors whitespace-nowrap"
               title="Atribuir a mim e mover para Em Atendimento"
             >
               <UserCheck className="w-4 h-4" />
-              Atribuir a Mim
+              Atribuir
             </button>
 
             {/* Alterar status */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               <select
                 value={bulkStatusVal}
                 onChange={(e) => setBulkStatusVal(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-lg bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="px-3 py-1.5 text-sm border border-neutral-200  rounded-md bg-neutral-50  text-neutral-800  focus:outline-none focus:ring-2 focus:ring-brand-navy/20 min-w-0"
               >
                 <option value="">Alterar Status…</option>
                 <option value="SOLICITADO">Solicitado</option>
@@ -545,7 +730,7 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
               <button
                 onClick={handleBulkStatus}
                 disabled={!bulkStatusVal || isPending}
-                className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40 transition-colors"
+                className="px-3 py-1.5 text-sm font-semibold rounded-md bg-neutral-100  text-neutral-700  hover:bg-neutral-200  disabled:opacity-40 transition-colors shrink-0"
               >
                 Aplicar
               </button>
@@ -555,16 +740,16 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
             <button
               onClick={handleBulkClose}
               disabled={isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md bg-brand-green text-white hover:bg-brand-green/90 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               <CheckCheck className="w-4 h-4" />
-              Fechar em Lote
+              Fechar
             </button>
 
             {/* Clear */}
             <button
               onClick={clearSelection}
-              className="ml-1 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              className="ml-1 w-7 h-7 flex items-center justify-center rounded-md text-neutral-400 hover:text-neutral-700  hover:bg-neutral-100  transition-colors shrink-0"
               title="Limpar seleção"
             >
               <X className="w-4 h-4" />
