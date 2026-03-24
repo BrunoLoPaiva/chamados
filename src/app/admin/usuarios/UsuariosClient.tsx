@@ -119,7 +119,7 @@ export default function UsuariosClient({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-neutral-200 
+              <tr className="border-b border-neutral-200">
                 <th className="py-4 px-4 font-semibold text-neutral-500  text-sm">
                   Nome
                 </th>
@@ -158,11 +158,11 @@ export default function UsuariosClient({
                       <span
                         className={
                           user.perfil === "ADMIN"
-                            ? "text-red-600 
+                            ? "text-red-600"
                             : user.perfil === "ADMIN_DEPTO"
-                              ? "text-purple-600 
+                              ? "text-purple-600"
                               : user.perfil === "TECNICO"
-                                ? "text-blue-600 
+                                ? "text-blue-600"
                                 : "text-neutral-600 "
                         }
                       >
@@ -322,7 +322,7 @@ export default function UsuariosClient({
                     {departamentosPermitidos.map((depto) => (
                       <label
                         key={depto.id}
-                        className="flex items-center gap-3 p-2 hover:bg-white  rounded-lg cursor-pointer transition-colors border border-transparent hover:border-neutral-200 
+                        className="flex items-center gap-3 p-2 hover:bg-white  rounded-lg cursor-pointer transition-colors border border-transparent hover:border-neutral-200"
                       >
                         <input
                           type="checkbox"
