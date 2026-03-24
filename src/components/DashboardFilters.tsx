@@ -1,519 +1,310 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { redirect } from "next/navigation";
-import { Plus, FileText, Filter as FilterIcon, X } from "lucide-react";
-import DashboardFilters from "@/components/DashboardFilters";
-import TicketsTable from "@/components/TicketsTable";
-import TicketDetailsPanel from "@/components/TicketDetailsPanel";
+"use client";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
-}) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/login");
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import {
+  MapPin,
+  User,
+  UserCog,
+  CalendarPlus,
+  CalendarClock,
+  CalendarCheck,
+  FilterX,
+  Check,
+} from "lucide-react";
 
-  const userId = Number((session.user as any).id);
+type LocalList = {
+  id: number;
+  nome: string;
+  parentId: number | null;
+};
 
-  // Next.js 15: searchParams must be awaited
-  const resolvedParams = await searchParams;
-  const q = resolvedParams?.q || "";
-  const statusFilter = resolvedParams?.status || "";
+type UsuarioList = {
+  id: number;
+  nome: string;
+};
 
-  const localId = resolvedParams?.localId || "";
-  const criadorId = resolvedParams?.criadorId || "";
-  const tecnicoId = resolvedParams?.tecnicoId || "";
-  const dtAberturaDe = resolvedParams?.dtAberturaDe || "";
-  const dtAberturaAte = resolvedParams?.dtAberturaAte || "";
-  const dtVencimentoDe = resolvedParams?.dtVencimentoDe || "";
-  const dtVencimentoAte = resolvedParams?.dtVencimentoAte || "";
-  const dtFechamentoDe = resolvedParams?.dtFechamentoDe || "";
-  const dtFechamentoAte = resolvedParams?.dtFechamentoAte || "";
+interface DashboardFiltersProps {
+  locais: LocalList[];
+  usuarios: UsuarioList[];
+}
 
-  const sort =
-    (resolvedParams?.sort as
-      | "codigo"
-      | "titulo"
-      | "prioridade"
-      | "local"
-      | "solicitante"
-      | "status"
-      | "dataCriacao"
-      | "dataVencimento") || "dataCriacao";
-  const dir = (resolvedParams?.dir as "asc" | "desc") || "desc";
-  const activeTicket = resolvedParams?.activeTicket || null;
-  const isFilterOpen = resolvedParams?.filters === "open";
+export default function DashboardFilters({
+  locais,
+  usuarios,
+}: DashboardFiltersProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // Busca do combo list data limitando colunas para não pesar
-  const [locaisList, usuariosList] = await Promise.all([
-    prisma.local.findMany({
-      where: { ativo: true },
-      select: { id: true, nome: true, parentId: true },
-      orderBy: { nome: "asc" },
-    }),
-    prisma.usuario.findMany({
-      where: { ativo: true },
-      select: { id: true, nome: true },
-      orderBy: { nome: "asc" },
-    }),
-  ]);
-
-  // Busca o usuário logado para descobrir seus departamentos e nível de acesso
-  const usuarioLogado = await prisma.usuario.findUnique({
-    where: { id: userId },
-    include: { departamentos: true },
-  });
-
-  const isAdmin = usuarioLogado?.perfil === "ADMIN";
-  const isDeptoAdmin = (session.user as any).isDeptoAdmin;
-  const meusDeptosIds =
-    usuarioLogado?.departamentos.map((d: any) => d.id) || [];
-
-  const hasAdvancedFilterActive = !!(
-    localId ||
-    criadorId ||
-    tecnicoId ||
-    dtAberturaDe ||
-    dtAberturaAte ||
-    dtVencimentoDe ||
-    dtVencimentoAte ||
-    dtFechamentoDe ||
-    dtFechamentoAte
+  // Estados inicializados com os valores atuais da URL
+  const [localId, setLocalId] = useState(searchParams?.get("localId") || "");
+  const [criadorId, setCriadorId] = useState(
+    searchParams?.get("criadorId") || "",
+  );
+  const [tecnicoId, setTecnicoId] = useState(
+    searchParams?.get("tecnicoId") || "",
   );
 
-  const showTabs = !hasAdvancedFilterActive && !q && !statusFilter;
+  const [dtAberturaDe, setDtAberturaDe] = useState(
+    searchParams?.get("dtAberturaDe") || "",
+  );
+  const [dtAberturaAte, setDtAberturaAte] = useState(
+    searchParams?.get("dtAberturaAte") || "",
+  );
 
-  const triagemWhere = {
-    status: "SOLICITADO",
-    tecnicoId: null,
-    ...(isAdmin ? {} : { departamentoDestinoId: { in: meusDeptosIds } }),
+  const [dtVencimentoDe, setDtVencimentoDe] = useState(
+    searchParams?.get("dtVencimentoDe") || "",
+  );
+  const [dtVencimentoAte, setDtVencimentoAte] = useState(
+    searchParams?.get("dtVencimentoAte") || "",
+  );
+
+  const [dtFechamentoDe, setDtFechamentoDe] = useState(
+    searchParams?.get("dtFechamentoDe") || "",
+  );
+  const [dtFechamentoAte, setDtFechamentoAte] = useState(
+    searchParams?.get("dtFechamentoAte") || "",
+  );
+
+  const handleApply = () => {
+    // Pegar parâmetros existentes (como aba atual, busca, etc)
+    const params = new URLSearchParams(searchParams?.toString() || "");
+
+    // Aplicar ou remover cada filtro
+    if (localId) params.set("localId", localId);
+    else params.delete("localId");
+    if (criadorId) params.set("criadorId", criadorId);
+    else params.delete("criadorId");
+    if (tecnicoId) params.set("tecnicoId", tecnicoId);
+    else params.delete("tecnicoId");
+
+    if (dtAberturaDe) params.set("dtAberturaDe", dtAberturaDe);
+    else params.delete("dtAberturaDe");
+    if (dtAberturaAte) params.set("dtAberturaAte", dtAberturaAte);
+    else params.delete("dtAberturaAte");
+
+    if (dtVencimentoDe) params.set("dtVencimentoDe", dtVencimentoDe);
+    else params.delete("dtVencimentoDe");
+    if (dtVencimentoAte) params.set("dtVencimentoAte", dtVencimentoAte);
+    else params.delete("dtVencimentoAte");
+
+    if (dtFechamentoDe) params.set("dtFechamentoDe", dtFechamentoDe);
+    else params.delete("dtFechamentoDe");
+    if (dtFechamentoAte) params.set("dtFechamentoAte", dtFechamentoAte);
+    else params.delete("dtFechamentoAte");
+
+    // Voltar para a página 1 ao filtrar
+    params.set("p", "1");
+
+    // Fechar o offcanvas de filtros
+    params.set("filters", "closed");
+
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
 
-  const countTriagem = showTabs
-    ? await prisma.chamado.count({ where: triagemWhere })
-    : 0;
-  const activeTab =
-    resolvedParams?.tab || (countTriagem > 0 ? "triagem" : "atendimentos");
+  const handleClear = () => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
 
-  // 2. QUERY BASE DE ATENDIMENTOS:
-  let atendimentosWhere: any = {};
+    // Limpar apenas os campos de filtro avançado
+    params.delete("localId");
+    params.delete("criadorId");
+    params.delete("tecnicoId");
+    params.delete("dtAberturaDe");
+    params.delete("dtAberturaAte");
+    params.delete("dtVencimentoDe");
+    params.delete("dtVencimentoAte");
+    params.delete("dtFechamentoDe");
+    params.delete("dtFechamentoAte");
 
-  if (statusFilter) {
-    atendimentosWhere.status = statusFilter;
-  } else if (showTabs) {
-    atendimentosWhere.status = {
-      in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
-    };
-  }
+    params.set("p", "1");
+    params.set("filters", "closed");
 
-  if (q || statusFilter || hasAdvancedFilterActive || isDeptoAdmin || isAdmin) {
-    if (isAdmin) {
-      // Admin vê tudo na busca
-    } else if (isDeptoAdmin) {
-      // Admin de depto vê tudo de seus deptos
-      atendimentosWhere.departamentoDestinoId = { in: meusDeptosIds };
-    } else {
-      // Tecnico normal só vê o que é dele ou que ele mesmo criou
-      atendimentosWhere.OR = [
-        { tecnicoId: userId },
-        { usuarioCriacaoId: userId },
-      ];
-    }
-  } else {
-    // Normal users ONLY see their created or assigned tickets on the "Atendimentos" default view
-    atendimentosWhere.OR = [
-      { tecnicoId: userId },
-      { usuarioCriacaoId: userId },
-    ];
-  }
-
-  if (q) {
-    atendimentosWhere = {
-      ...atendimentosWhere,
-      OR: [
-        ...(atendimentosWhere.OR || []),
-        { titulo: { contains: q } },
-        { codigo: { contains: q.replace("#", "") } },
-      ],
-    };
-  }
-
-  // Rest of Advanced Filters
-  if (localId) atendimentosWhere.localId = Number(localId);
-  if (criadorId) atendimentosWhere.usuarioCriacaoId = Number(criadorId);
-  if (tecnicoId) atendimentosWhere.tecnicoId = Number(tecnicoId);
-
-  // Date Filters
-  if (dtAberturaDe || dtAberturaAte) {
-    atendimentosWhere.dataCriacao = {};
-    if (dtAberturaDe)
-      atendimentosWhere.dataCriacao.gte = new Date(
-        `${dtAberturaDe}T00:00:00.000Z`,
-      );
-    if (dtAberturaAte)
-      atendimentosWhere.dataCriacao.lte = new Date(
-        `${dtAberturaAte}T23:59:59.999Z`,
-      );
-  }
-
-  if (dtVencimentoDe || dtVencimentoAte) {
-    atendimentosWhere.dataVencimento = {};
-    if (dtVencimentoDe)
-      atendimentosWhere.dataVencimento.gte = new Date(
-        `${dtVencimentoDe}T00:00:00.000Z`,
-      );
-    if (dtVencimentoAte)
-      atendimentosWhere.dataVencimento.lte = new Date(
-        `${dtVencimentoAte}T23:59:59.999Z`,
-      );
-  }
-
-  if (dtFechamentoDe || dtFechamentoAte) {
-    atendimentosWhere.dataAtendimento = {};
-    if (dtFechamentoDe)
-      atendimentosWhere.dataAtendimento.gte = new Date(
-        `${dtFechamentoDe}T00:00:00.000Z`,
-      );
-    if (dtFechamentoAte)
-      atendimentosWhere.dataAtendimento.lte = new Date(
-        `${dtFechamentoAte}T23:59:59.999Z`,
-      );
-  }
-
-  const page = Math.max(1, Number(resolvedParams?.p || 1));
-  const take = 25; // Aumentado para 25 por página
-  const skip = (page - 1) * take;
-
-  let chamadosListagem: any[] = [];
-  let totalListagem = 0;
-
-  // Mapeamento de ordenação para Prisma
-  let orderByClause: any = {};
-  if (sort === "codigo") orderByClause = { codigo: dir };
-  else if (sort === "titulo") orderByClause = { titulo: dir };
-  else if (sort === "status") orderByClause = { status: dir };
-  else if (sort === "dataCriacao") orderByClause = { dataCriacao: dir };
-  else if (sort === "dataVencimento") orderByClause = { dataVencimento: dir };
-  else if (sort === "prioridade") orderByClause = { tipo: { prioridade: dir } };
-  else if (sort === "local") orderByClause = { local: { nome: dir } };
-  else if (sort === "solicitante")
-    orderByClause = { usuarioCriacao: { nome: dir } };
-
-  if (showTabs && activeTab === "triagem") {
-    [chamadosListagem, totalListagem] = await Promise.all([
-      prisma.chamado.findMany({
-        where: triagemWhere,
-        include: {
-          usuarioCriacao: true,
-          tipo: true,
-          local: true,
-          departamentoDestino: true,
-        },
-        orderBy:
-          Object.keys(orderByClause).length > 0
-            ? orderByClause
-            : { dataCriacao: "asc" },
-        take,
-        skip,
-      }),
-      prisma.chamado.count({ where: triagemWhere }),
-    ]);
-  } else {
-    [chamadosListagem, totalListagem] = await Promise.all([
-      prisma.chamado.findMany({
-        where: atendimentosWhere,
-        include: { usuarioCriacao: true, tipo: true, local: true },
-        orderBy:
-          Object.keys(orderByClause).length > 0
-            ? orderByClause
-            : { dataCriacao: "desc" },
-        take,
-        skip,
-      }),
-      prisma.chamado.count({ where: atendimentosWhere }),
-    ]);
-  }
-
-  // 3. BUSCA DO CHAMADO ATIVO SE HOUVER
-  let chamadoAtivoCompleto: any = null;
-  if (activeTicket) {
-    chamadoAtivoCompleto = await prisma.chamado.findUnique({
-      where: { codigo: activeTicket },
-      include: {
-        usuarioCriacao: true,
-        tecnico: true,
-        departamentoDestino: { include: { usuarios: true } },
-        local: true,
-        tipo: true,
-        anexos: true,
-        acoes: { include: { acao: true } },
-        interacoes: { include: { usuario: true }, orderBy: { data: "asc" } },
-      },
-    });
-  }
-
-  const totalPages = Math.max(1, Math.ceil(totalListagem / take));
-
-  const buildUrl = (p: number, overwriteTab?: string) => {
-    const sp = new URLSearchParams();
-    if (q) sp.set("q", q);
-    if (statusFilter) sp.set("status", statusFilter);
-    if (sort !== "dataCriacao") sp.set("sort", sort);
-    if (dir !== "desc") sp.set("dir", dir);
-    if (overwriteTab) {
-      sp.set("tab", overwriteTab);
-    } else if (activeTab === "triagem" && showTabs) {
-      sp.set("tab", "triagem");
-    }
-    sp.set("p", String(p));
-    return `/dashboard?${sp.toString()}`;
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
+
+  // Separar locais raiz e sub-locais para melhor visualização
+  const locaisRaiz = locais.filter((l) => !l.parentId);
 
   return (
-    <div
-      className={`min-h-screen bg-[#F2F2F2] p-4 md:p-6 lg:p-6 transition-colors ${isFilterOpen ? "overflow-hidden" : ""}`}
-    >
-      <div
-        className={
-          activeTicket ? "mx-auto w-full max-w-[1600px]" : "max-w-6xl mx-auto"
-        }
-      >
-        {/* CABEÇALHO */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">
-              Painel de Chamados
-            </h1>
-            <p className="text-sm md:text-base text-neutral-500 mt-1">
-              Caixa de entrada operacional
-            </p>
-          </div>
+    <div className="flex flex-col h-full gap-6 pb-20">
+      {/* SEÇÃO 1: Envolvidos e Local */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2">
+          Geral
+        </h3>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* BOTÃO DE FILTRO */}
-            <Link
-              href={
-                buildUrl(page) +
-                (buildUrl(page).includes("?") ? "&" : "?") +
-                (isFilterOpen ? "filters=closed" : "filters=open")
-              }
-              scroll={false}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-bold text-sm transition-all border ${
-                hasAdvancedFilterActive
-                  ? "border-brand-navy bg-brand-navy/10 text-brand-navy shadow-sm"
-                  : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 shadow-sm"
-              }`}
-            >
-              <FilterIcon className="w-4 h-4" />
-              Filtros Avançados
-              {hasAdvancedFilterActive && (
-                <span className="flex w-2 h-2 rounded-full bg-brand-navy absolute top-2 right-2 md:relative md:top-0 md:right-0"></span>
-              )}
-            </Link>
-
-            {/* BOTÃO NOVO CHAMADO */}
-            <Link
-              href="/chamado/novo"
-              className="flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-2.5 bg-brand-navy text-white rounded-md hover:bg-brand-navy/90 shadow-sm transition-all font-bold"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Chamado
-            </Link>
-          </div>
-        </header>
-
-        {/* BARRA DE CONTEXTO DE FILTROS ATIVOS (CHIPS) */}
-        {(hasAdvancedFilterActive || statusFilter) && (
-          <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm">
-            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider mr-2">
-              Filtros Ativos:
-            </span>
-
-            {statusFilter && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-brand-navy/10 text-brand-navy border border-brand-navy/20">
-                Status: {statusFilter}
-              </span>
-            )}
-
-            {localId && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                Localização Filtrada
-              </span>
-            )}
-
-            {(dtAberturaDe || dtAberturaAte) && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                Data de Abertura
-              </span>
-            )}
-
-            <Link
-              href="/dashboard"
-              scroll={false}
-              className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline ml-auto flex items-center gap-1"
-            >
-              <X className="w-3 h-3" /> Limpar Todos
-            </Link>
-          </div>
-        )}
-
-        {/* ABAS (TABS) */}
-        {showTabs && (
-          <div className="flex space-x-4 mb-6 border-b border-neutral-300">
-            <Link
-              href={buildUrl(1, "triagem")}
-              className={`pb-3 text-sm font-bold transition-all border-b-2 ${
-                activeTab === "triagem"
-                  ? "border-brand-yellow text-brand-navy"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              Solicitações
-              {countTriagem > 0 && (
-                <span
-                  className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === "triagem" ? "bg-brand-yellow text-brand-navy" : "bg-neutral-200 text-neutral-700"}`}
-                >
-                  {countTriagem}
-                </span>
-              )}
-            </Link>
-            <Link
-              href={buildUrl(1, "atendimentos")}
-              className={`pb-3 text-sm font-bold transition-all border-b-2 ${
-                activeTab === "atendimentos"
-                  ? "border-brand-navy text-brand-navy"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              Meus Atendimentos
-            </Link>
-          </div>
-        )}
-
-        {/* TÍTULO DA LISTAGEM */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-neutral-800 flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              {!showTabs
-                ? `Resultados da Busca`
-                : activeTab === "triagem"
-                  ? "Aguardando Atribuição"
-                  : "Seus Chamados em Andamento"}
-            </h2>
-            {totalListagem > 0 && (
-              <span className="text-sm font-bold text-neutral-500 bg-white px-3 py-1 rounded-full border border-neutral-200 shadow-sm">
-                Total: {totalListagem}
-              </span>
-            )}
-          </div>
-
-          <div
-            className={`grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 ${activeTicket ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
+          <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5" /> Localização
+          </label>
+          <select
+            value={localId}
+            onChange={(e) => setLocalId(e.target.value)}
+            className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
           >
-            {/* Esquerda: A tabela (ou tela cheia) */}
-            <div
-              className={`${activeTicket ? "hidden lg:block lg:col-span-4 xl:col-span-3" : ""}`}
-            >
-              <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-                <TicketsTable
-                  chamados={chamadosListagem}
-                  sort={sort}
-                  dir={dir}
-                  isSplitView={!!activeTicket}
-                  activeTicketCodigo={activeTicket}
-                />
-              </div>
-
-              {/* Paginação */}
-              {totalPages > 1 && (
-                <div className="flex justify-between md:justify-center items-center gap-2 md:gap-4 mt-6 bg-white p-2 rounded-md border border-neutral-200 shadow-sm">
-                  {page > 1 ? (
-                    <Link
-                      href={buildUrl(page - 1)}
-                      className="px-4 py-2 rounded-md text-sm font-bold hover:bg-neutral-100 transition-colors text-neutral-700"
-                    >
-                      Anterior
-                    </Link>
-                  ) : (
-                    <div className="px-4 py-2 border border-transparent text-sm opacity-50 font-bold text-neutral-400">
-                      Anterior
-                    </div>
-                  )}
-
-                  <span className="text-sm font-bold text-brand-navy whitespace-nowrap px-4 py-1.5 bg-brand-navy/5 rounded-md">
-                    Pág {page} de {totalPages}
-                  </span>
-
-                  {page < totalPages ? (
-                    <Link
-                      href={buildUrl(page + 1)}
-                      className="px-4 py-2 rounded-md text-sm font-bold hover:bg-neutral-100 transition-colors text-neutral-700"
-                    >
-                      Próxima
-                    </Link>
-                  ) : (
-                    <div className="px-4 py-2 border border-transparent text-sm opacity-50 font-bold text-neutral-400">
-                      Próxima
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Direita: O ticket ativo (Master-Detail) */}
-            {activeTicket && chamadoAtivoCompleto && (
-              <div className="lg:col-span-8 xl:col-span-9 animate-in slide-in-from-right-8 duration-500">
-                <TicketDetailsPanel
-                  chamado={chamadoAtivoCompleto}
-                  currentUserId={userId}
-                  isAdmin={isAdmin}
-                  meusDeptosIds={meusDeptosIds}
-                />
-              </div>
-            )}
-          </div>
+            <option value="">Qualquer local</option>
+            {locaisRaiz.map((pai) => (
+              <optgroup key={pai.id} label={pai.nome}>
+                <option value={pai.id}>{pai.nome} (Geral)</option>
+                {locais
+                  .filter((l) => l.parentId === pai.id)
+                  .map((filho) => (
+                    <option key={filho.id} value={filho.id}>
+                      ↳ {filho.nome}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
         </div>
 
-        {/* OFFCANVAS FILTROS (Mantido no final do DOM) */}
-        {isFilterOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end">
-            <Link
-              href={
-                buildUrl(page) +
-                (buildUrl(page).includes("?") ? "&" : "?") +
-                "filters=closed"
-              }
-              scroll={false}
-              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
+        <div>
+          <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5" /> Solicitante (Criador)
+          </label>
+          <select
+            value={criadorId}
+            onChange={(e) => setCriadorId(e.target.value)}
+            className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
+          >
+            <option value="">Qualquer solicitante</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
+            <UserCog className="w-3.5 h-3.5" /> Técnico Atribuído
+          </label>
+          <select
+            value={tecnicoId}
+            onChange={(e) => setTecnicoId(e.target.value)}
+            className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
+          >
+            <option value="">Qualquer técnico</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* SEÇÃO 2: Abertura */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2 flex items-center gap-1.5">
+          <CalendarPlus className="w-4 h-4" /> Data de Abertura
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              De
+            </label>
+            <input
+              type="date"
+              value={dtAberturaDe}
+              onChange={(e) => setDtAberturaDe(e.target.value)}
+              className="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20"
             />
-            <div className="relative w-full max-w-sm h-full bg-white border-l border-neutral-200 shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
-              <div className="flex items-center justify-between px-6 pb-4 border-b border-neutral-200">
-                <h2 className="text-lg font-bold text-brand-navy">
-                  Filtros Avançados
-                </h2>
-                <Link
-                  href={
-                    buildUrl(page) +
-                    (buildUrl(page).includes("?") ? "&" : "?") +
-                    "filters=closed"
-                  }
-                  scroll={false}
-                  className="p-2 -mr-2 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </Link>
-              </div>
-              <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                <DashboardFilters locais={locaisList} usuarios={usuariosList} />
-              </div>
-            </div>
           </div>
-        )}
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Até
+            </label>
+            <input
+              type="date"
+              value={dtAberturaAte}
+              onChange={(e) => setDtAberturaAte(e.target.value)}
+              className="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SEÇÃO 3: SLA / Vencimento */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2 flex items-center gap-1.5">
+          <CalendarClock className="w-4 h-4" /> Data de SLA / Venc.
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              De
+            </label>
+            <input
+              type="date"
+              value={dtVencimentoDe}
+              onChange={(e) => setDtVencimentoDe(e.target.value)}
+              className="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Até
+            </label>
+            <input
+              type="date"
+              value={dtVencimentoAte}
+              onChange={(e) => setDtVencimentoAte(e.target.value)}
+              className="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SEÇÃO 4: Fechamento */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2 flex items-center gap-1.5">
+          <CalendarCheck className="w-4 h-4" /> Data de Fechamento
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              De
+            </label>
+            <input
+              type="date"
+              value={dtFechamentoDe}
+              onChange={(e) => setDtFechamentoDe(e.target.value)}
+              className="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Até
+            </label>
+            <input
+              type="date"
+              value={dtFechamentoAte}
+              onChange={(e) => setDtFechamentoAte(e.target.value)}
+              className="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* AÇÕES FIXADAS NO RODAPÉ DO COMPONENTE */}
+      <div className="mt-auto pt-6 border-t border-neutral-200 flex flex-col gap-2 bg-white">
+        <button
+          onClick={handleApply}
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-navy hover:bg-brand-navy/90 text-white font-bold rounded-md transition-colors shadow-sm"
+        >
+          <Check className="w-4 h-4" />
+          Aplicar Filtros
+        </button>
+
+        <button
+          onClick={handleClear}
+          className="flex items-center justify-center gap-2 w-full py-2 bg-white border border-neutral-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-neutral-600 font-semibold rounded-md transition-colors"
+        >
+          <FilterX className="w-4 h-4" />
+          Limpar Filtros
+        </button>
       </div>
     </div>
   );
