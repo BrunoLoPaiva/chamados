@@ -11,7 +11,8 @@ interface LocalItem {
 interface Props {
   departamentos: { id: number; nome: string }[];
   locais: LocalItem[];
-  createAction: (formData: FormData) => Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createAction: any;
 }
 
 export default function TipoFormClient({
@@ -26,34 +27,32 @@ export default function TipoFormClient({
   return (
     <form
       action={createAction}
-      className="bg-neutral-50 /50 border border-neutral-200  rounded-md p-5 transition-colors space-y-4"
+      className="bg-neutral-50/50 border border-neutral-200 rounded-lg p-5 transition-colors space-y-4"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Nome */}
-        <div className="lg:col-span-1">
-          <label className="block text-xs font-bold text-neutral-500  uppercase tracking-wider mb-2">
-            Nome do Problema
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div>
+          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+            Nome do Problema/Tipo
           </label>
           <input
             type="text"
             name="nome"
             required
             placeholder="Ex: Impressora Offline"
-            className="w-full px-3 py-2 bg-white  border border-neutral-300  rounded-lg shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors"
+            className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-colors"
           />
         </div>
 
-        {/* Departamento */}
         <div>
-          <label className="block text-xs font-bold text-neutral-500  uppercase tracking-wider mb-2">
-            Departamento
+          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+            Departamento Destino
           </label>
           <select
             name="departamentoId"
             required
-            className="w-full px-3 py-2 bg-white  border border-neutral-300  rounded-lg shadow-sm text-sm appearance-none focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors"
+            className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-colors"
           >
-            <option value="">Destino...</option>
+            <option value="">Selecione...</option>
             {departamentos.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nome}
@@ -62,51 +61,53 @@ export default function TipoFormClient({
           </select>
         </div>
 
-        {/* Urgência / SLA */}
         <div>
-          <label className="block text-xs font-bold text-neutral-500  uppercase tracking-wider mb-2">
-            Urgência / SLA
+          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+            Prioridade & SLA
           </label>
           <div className="flex gap-2">
             <select
               name="prioridade"
               required
-              className="w-1/2 px-2 py-2 bg-white  border border-neutral-300  rounded-lg shadow-sm text-sm appearance-none focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors"
+              className="w-1/2 px-2 py-2 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-colors"
             >
               <option value="Baixa">Baixa</option>
               <option value="Media">Média</option>
               <option value="Alta">Alta</option>
             </select>
-            <input
-              type="number"
-              name="tempoSlaHoras"
-              defaultValue={24}
-              min={1}
-              required
-              className="w-1/2 px-2 py-2 bg-white  border border-neutral-300  rounded-lg shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors"
-              placeholder="Horas"
-              title="SLA em horas"
-            />
+            <div className="relative w-1/2">
+              <input
+                type="number"
+                name="tempoSlaHoras"
+                defaultValue={24}
+                min={1}
+                required
+                className="w-full pl-2 pr-8 py-2 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-colors"
+                title="SLA em horas"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">
+                h
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Local / SubLocal */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-neutral-200 ">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-neutral-200">
         <div>
-          <label className="block text-xs font-bold text-neutral-500  uppercase tracking-wider mb-2">
+          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
             Local Específico{" "}
             <span className="text-neutral-400 normal-case font-normal">
-              (opcional — deixe vazio para qualquer local)
+              (Opcional)
             </span>
           </label>
           <select
             name="localId"
             value={localId}
             onChange={(e) => setLocalId(e.target.value)}
-            className="w-full px-3 py-2 bg-white  border border-neutral-300  rounded-lg shadow-sm text-sm appearance-none focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors"
+            className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-colors"
           >
-            <option value="">Qualquer local</option>
+            <option value="">Válido em qualquer local</option>
             {locais.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.nome}
@@ -116,16 +117,16 @@ export default function TipoFormClient({
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-neutral-500  uppercase tracking-wider mb-2">
-            Sub-Local Específico{" "}
+          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+            Sub-Local{" "}
             <span className="text-neutral-400 normal-case font-normal">
-              (opcional)
+              (Opcional)
             </span>
           </label>
           <select
             name="subLocalId"
             disabled={subLocais.length === 0}
-            className="w-full px-3 py-2 bg-white  border border-neutral-300  rounded-lg shadow-sm text-sm appearance-none focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors disabled:opacity-50"
+            className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-colors disabled:opacity-50 disabled:bg-neutral-100"
           >
             <option value="">Qualquer sub-local</option>
             {subLocais.map((sl) => (
@@ -137,12 +138,12 @@ export default function TipoFormClient({
         </div>
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end pt-2">
         <button
           type="submit"
-          className="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg hover:bg-brand-navy/90 shadow-sm transition-colors text-sm"
+          className="px-6 py-2.5 bg-brand-navy text-white font-bold rounded-md hover:bg-brand-navy/90 shadow-sm transition-colors text-sm"
         >
-          Adicionar Tipo
+          Adicionar Tipo de Chamado
         </button>
       </div>
     </form>

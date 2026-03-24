@@ -1,14 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { Fragment } from "react";
 import { prisma } from "@/lib/prisma";
-import { createLocal, deleteLocal } from "@/app/actions/admin";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import DeleteButton from "@/components/DeleteButton";
+import LocaisClient from "./LocaisClient";
 
 export default async function LocaisPage() {
   const session = await getServerSession(authOptions);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userId = Number((session?.user as any).id);
 
   const usuarioLogado = await prisma.usuario.findUnique({
@@ -37,7 +35,7 @@ export default async function LocaisPage() {
     orderBy: { nome: "asc" },
   });
 
-  // Organizar locais: Categorias (sem parent) primeiro, e mapear os filhos para renderizar debaixo do pai
+  // Organiza categorias (sem parent) e mapeia os filhos
   const categorias = locais.filter((l) => !l.parentId);
   const locaisPorCategoria = locais.reduce(
     (acc, local) => {
@@ -51,137 +49,21 @@ export default async function LocaisPage() {
   );
 
   return (
-    <div className="bg-white  rounded-lg shadow-sm border border-neutral-200  p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900 0 tracking-tight">
-            Locais e Categorias
-          </h1>
-          <p className="text-neutral-500  mt-1">
-            Gerencie as categorias estruturais e as unidades.
-          </p>
-        </div>
-
-        <form action={createLocal} className="flex gap-2 w-full md:w-auto">
-          <select
-            name="parentId"
-            className="px-4 py-2 bg-neutral-50  border border-neutral-300  rounded-md shadow-sm text-sm focus:ring-2 focus:ring-blue-500/20 outline-none w-48 text-neutral-600  transition-colors"
-          >
-            <option value="">(Sem categoria pai)</option>
-            {categorias.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nome}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            name="nome"
-            required
-            placeholder="Nome (ex: Praças ou P1)..."
-            className="flex-1 px-4 py-2 bg-neutral-50  border border-neutral-300  rounded-md shadow-sm text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors"
-          />
-          <button
-            type="submit"
-            className="px-5 py-2 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 shadow-sm transition-colors shrink-0"
-          >
-            Adicionar Local
-          </button>
-        </form>
+    <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">
+          Locais e Categorias
+        </h1>
+        <p className="text-neutral-500 mt-1">
+          Gerencie as categorias estruturais e as unidades de atendimento.
+        </p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-neutral-200 ">
-              <th className="py-3 px-4 font-bold text-neutral-900 ">
-                Nome da Unidade
-              </th>
-              <th className="py-3 px-4 font-bold text-neutral-900 ">
-                Chamados
-              </th>
-              <th className="py-3 px-4 font-bold text-neutral-900 ">Prevs.</th>
-              <th className="py-3 px-4 font-bold text-neutral-900  text-right">
-                Ação
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {categorias.map((categoria) => (
-              <Fragment key={`cat-${categoria.id}`}>
-                {/* Linha da Categoria / Local Master */}
-                <tr className="border-b border-neutral-100  bg-neutral-50/50 /10 hover:bg-neutral-100  transition-colors">
-                  <td className="py-3 px-4 font-bold text-neutral-900  flex items-center gap-2">
-                    {locaisPorCategoria[categoria.id]?.length > 0 && (
-                      <span className="text-neutral-400">📂</span>
-                    )}
-                    {categoria.nome}
-                  </td>
-                  <td className="py-3 px-4 text-neutral-600 ">
-                    {(categoria as any)._count?.chamados || 0}
-                  </td>
-                  <td className="py-3 px-4 text-neutral-600 ">
-                    {(categoria as any)._count?.preventivas || 0}
-                  </td>
-                  <td className="py-3 px-4 flex justify-end">
-                    <DeleteButton
-                      action={deleteLocal}
-                      id={categoria.id}
-                      disabled={
-                        ((categoria as any)._count?.chamados || 0) > 0 ||
-                        ((categoria as any)._count?.preventivas || 0) > 0 ||
-                        !!locaisPorCategoria[categoria.id]?.length
-                      }
-                      title="Excluir Categoria"
-                      text={`Tem certeza que deseja remover a categoria "${categoria.nome}"?`}
-                    />
-                  </td>
-                </tr>
-
-                {/* Sub-locais da categoria */}
-                {(locaisPorCategoria[categoria.id] || []).map((sub) => (
-                  <tr
-                    key={`sub-${sub.id}`}
-                    className="border-b border-neutral-100  hover:bg-neutral-50  transition-colors"
-                  >
-                    <td className="py-2.5 px-4 pl-12 font-medium text-neutral-700  relative">
-                      <div className="absolute left-6 top-1/2 -mt-px w-4 border-t border-neutral-300 "></div>
-                      <div className="absolute left-6 top-0 bottom-1/2 border-l border-neutral-300 "></div>
-                      {sub.nome}
-                    </td>
-                    <td className="py-2.5 px-4 text-sm text-neutral-500 ">
-                      {(sub as any)._count?.chamados || 0}
-                    </td>
-                    <td className="py-2.5 px-4 text-sm text-neutral-500 ">
-                      {(sub as any)._count?.preventivas || 0}
-                    </td>
-                    <td className="py-2.5 px-4 flex justify-end">
-                      <DeleteButton
-                        action={deleteLocal}
-                        id={sub.id}
-                        disabled={
-                          ((sub as any)._count?.chamados || 0) > 0 ||
-                          ((sub as any)._count?.preventivas || 0) > 0
-                        }
-                        title="Excluir Sub-local"
-                        text={`Tem certeza que deseja remover "${sub.nome}"?`}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
-
-            {locais.length === 0 && (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-neutral-500 ">
-                  Nenhum local cadastrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Aqui o Server passa os dados mastigados para o Client */}
+      <LocaisClient
+        categorias={categorias}
+        locaisPorCategoria={locaisPorCategoria}
+      />
     </div>
   );
 }
