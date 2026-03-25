@@ -430,7 +430,7 @@ export default async function DashboardPage({
                   : "border-transparent text-neutral-500 hover:text-neutral-800 "
               }`}
             >
-              Meus Atendimentos
+              Atendimentos
             </Link>
           </div>
         )}
