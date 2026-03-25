@@ -27,7 +27,9 @@ export async function createTicket(formData: FormData) {
 
   if (isPreventiva) {
     if (!frequenciaDias || frequenciaDias <= 0 || !tecnicoId) {
-      throw new Error("Para preventivas, a frequência de dias e o técnico são obrigatórios.");
+      throw new Error(
+        "Para preventivas, a frequência de dias e o técnico são obrigatórios.",
+      );
     }
   }
 
@@ -142,16 +144,20 @@ export async function atribuirChamado(formData: FormData) {
   const userId = Number((session.user as any).id);
   const user = await prisma.usuario.findUnique({
     where: { id: userId },
-    include: { departamentos: true }
+    include: { departamentos: true },
   });
-  
+
   if (!user) throw new Error("Usuário não encontrado");
 
   const isAdmin = user.perfil === "ADMIN";
-  const isMembro = user.departamentos.some(d => d.id === ticket.departamentoDestinoId);
-  
+  const isMembro = user.departamentos.some(
+    (d) => d.id === ticket.departamentoDestinoId,
+  );
+
   if (!isAdmin && !isMembro) {
-    throw new Error("Acesso negado. Você não pertence ao departamento deste chamado.");
+    throw new Error(
+      "Acesso negado. Você não pertence ao departamento deste chamado.",
+    );
   }
 
   await prisma.chamado.update({
@@ -206,22 +212,28 @@ export async function fecharChamado(formData: FormData) {
   if (!ticket) throw new Error("Chamado não encontrado");
 
   if (ticket.status === "FECHADO") {
-    throw new Error("Este chamado já se encontra FECHADO. É provável que outro colaborador tenha finalizado o atendimento enquanto você estava com a tela aberta.");
+    throw new Error(
+      "Este chamado já se encontra FECHADO. É provável que outro colaborador tenha finalizado o atendimento enquanto você estava com a tela aberta.",
+    );
   }
 
   const userId = Number((session.user as any).id);
   const user = await prisma.usuario.findUnique({
     where: { id: userId },
-    include: { departamentos: true }
+    include: { departamentos: true },
   });
-  
+
   if (!user) throw new Error("Usuário não encontrado");
 
   const isAdmin = user.perfil === "ADMIN";
-  const isMembro = user.departamentos.some(d => d.id === ticket.departamentoDestinoId);
-  
+  const isMembro = user.departamentos.some(
+    (d) => d.id === ticket.departamentoDestinoId,
+  );
+
   if (!isAdmin && !isMembro) {
-    throw new Error("Acesso negado. Você não pertence ao departamento deste chamado.");
+    throw new Error(
+      "Acesso negado. Você não pertence ao departamento deste chamado.",
+    );
   }
 
   await prisma.$transaction(async (tx: any) => {
@@ -262,23 +274,25 @@ export async function bulkAtribuir(ids: number[], tecnicoAlvoId: number) {
 
   const targetUser = await prisma.usuario.findUnique({
     where: { id: tecnicoAlvoId },
-    include: { departamentos: true }
+    include: { departamentos: true },
   });
 
   if (!targetUser) throw new Error("Técnico alvo não encontrado");
 
   const chamados = await prisma.chamado.findMany({
     where: { id: { in: ids } },
-    select: { id: true, departamentoDestinoId: true }
+    select: { id: true, departamentoDestinoId: true },
   });
 
-  const deptosIdsAlvo = targetUser.departamentos.map(d => d.id);
+  const deptosIdsAlvo = targetUser.departamentos.map((d) => d.id);
   const isAdmin = targetUser.perfil === "ADMIN";
 
   if (!isAdmin) {
     for (const c of chamados) {
       if (!deptosIdsAlvo.includes(c.departamentoDestinoId)) {
-        throw new Error("Ação negada: O técnico selecionado não faz parte do departamento exigido por um dos chamados.");
+        throw new Error(
+          "Ação negada: O técnico selecionado não faz parte do departamento exigido por um dos chamados.",
+        );
       }
     }
   }
@@ -321,23 +335,27 @@ export async function bulkEncerrar(ids: number[], solucao: string) {
   const acoesPendentes = await prisma.chamadoAcao.findFirst({
     where: {
       chamadoId: { in: ids },
-      realizado: false
+      realizado: false,
     },
-    include: { chamado: true }
+    include: { chamado: true },
   });
 
   if (acoesPendentes) {
-    throw new Error(`Não é possível fechar em lote pois o chamado #${acoesPendentes.chamado.codigo} possui checklists obrigatórios pendentes.`);
+    throw new Error(
+      `Não é possível fechar em lote pois o chamado #${acoesPendentes.chamado.codigo} possui checklists obrigatórios pendentes.`,
+    );
   }
 
   const chamadosVerificacao = await prisma.chamado.findMany({
     where: { id: { in: ids } },
-    select: { id: true, codigo: true, status: true }
+    select: { id: true, codigo: true, status: true },
   });
 
-  const jaFechados = chamadosVerificacao.filter(c => c.status === "FECHADO");
+  const jaFechados = chamadosVerificacao.filter((c) => c.status === "FECHADO");
   if (jaFechados.length > 0) {
-    throw new Error(`Operação cancelada: O(s) chamado(s) ${jaFechados.map(c => `#${c.codigo}`).join(", ")} já foi/foram fechado(s) por outro colaborador.`);
+    throw new Error(
+      `Operação cancelada: O(s) chamado(s) ${jaFechados.map((c) => `#${c.codigo}`).join(", ")} já foi/foram fechado(s) por outro colaborador.`,
+    );
   }
 
   await prisma.chamado.updateMany({

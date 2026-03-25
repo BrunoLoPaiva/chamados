@@ -16,7 +16,13 @@ import {
   X,
 } from "lucide-react";
 
-export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose?: () => void }) {
+export default function Sidebar({
+  isOpen = false,
+  onClose,
+}: {
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -85,15 +91,17 @@ export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean,
   return (
     <>
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity" 
-          onClick={onClose} 
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={onClose}
         />
       )}
-      <nav className={`flex flex-col w-64 h-screen border-r border-brand-navy/20 bg-brand-navy fixed left-0 top-0 z-50 shadow-xl transition-transform duration-300 md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <nav
+        className={`flex flex-col w-64 h-screen border-r border-brand-navy/20 bg-brand-navy fixed left-0 top-0 z-50 shadow-xl transition-transform duration-300 md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <div className="p-6 relative">
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="absolute top-4 right-4 p-2 text-white/50 hover:text-white md:hidden bg-white/5 rounded-md"
           >
             <X className="w-5 h-5" />
