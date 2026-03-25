@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Viarondon | Chamados",
+  title: "HelpMe | Sistema de chamados ViaRondon",
   description: "Sistema interno de chamados da ViaRondon Concessionária de Rodovia S.A",
 };
 
