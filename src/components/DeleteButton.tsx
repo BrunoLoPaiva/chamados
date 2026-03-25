@@ -28,6 +28,11 @@ export default function DeleteButton({
       cancelButtonText: "Cancelar",
       background: "var(--background-color, #fff)",
       color: "var(--text-color, #171717)",
+      customClass: {
+        popup: 'rounded-xl font-sans border border-neutral-200 shadow-xl',
+        confirmButton: 'bg-red-600 rounded-md font-bold px-6 py-2.5',
+        cancelButton: 'bg-neutral-100 text-neutral-800 rounded-md font-bold px-6 py-2.5 hover:bg-neutral-200'
+      }
     });
 
     if (result.isConfirmed) {

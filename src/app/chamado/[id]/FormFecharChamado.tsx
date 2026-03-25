@@ -4,14 +4,20 @@
 import { useState, useEffect } from "react";
 import { fecharChamado } from "@/app/actions/tickets";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function FormFecharChamado({ chamado }: { chamado: any }) {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
-    await fecharChamado(formData);
-    setLoading(false);
+    try {
+      await fecharChamado(formData);
+    } catch (err) {
+      toast.error("Erro ao fechar o chamado. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -42,7 +48,7 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
   return (
     <div className="mt-8 bg-neutral-50 /50 p-6 md:p-8 rounded-lg border border-neutral-200  transition-colors">
       <h3 className="text-xl font-bold text-neutral-900  mb-6 flex items-center gap-2 transition-colors">
-        <CheckCircle2 className="w-6 h-6 text-blue-600" />
+        <CheckCircle2 className="w-6 h-6 text-brand-green" />
         Concluir Atendimento
       </h3>
 
@@ -63,7 +69,7 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
                   <input
                     type="checkbox"
                     name={`acao_${ca.id}`}
-                    className="mt-0.5 w-5 h-5 text-blue-600 border-neutral-300 rounded focus:ring-blue-500   focus:ring-2   cursor-pointer transition-colors"
+                    className="mt-0.5 w-5 h-5 text-brand-green border-neutral-300 rounded focus:ring-brand-green focus:ring-2 cursor-pointer transition-colors"
                   />
                   <span className="text-sm font-medium text-neutral-700  group-hover:text-neutral-900  transition-colors">
                     {ca.acao.descricao}
@@ -82,7 +88,7 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
             name="solucao"
             required
             rows={4}
-            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 outline-none   bg-white transition-colors"
+            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-green/20 outline-none   bg-white transition-colors"
             placeholder="Descreva o que foi realizado para solucionar o problema..."
           ></textarea>
         </div>
@@ -94,7 +100,7 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
           <input
             name="anexo"
             type="file"
-            className="block w-full text-sm text-neutral-500  file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100   border border-neutral-300  rounded-md p-2 bg-white  transition-colors"
+            className="block w-full text-sm text-neutral-500  file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-green/10 file:text-brand-green hover:file:bg-brand-green/20 border border-neutral-300  rounded-md p-2 bg-white  transition-colors"
           />
         </div>
 
@@ -102,7 +108,7 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 transition-all w-full md:w-auto min-w-[180px]"
+            className="px-6 py-3 bg-brand-green text-white rounded-md hover:bg-brand-green/90 font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 transition-all w-full md:w-auto min-w-[180px]"
           >
             {loading ? (
               <>

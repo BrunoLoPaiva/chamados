@@ -4,6 +4,7 @@ import NovoChamadoForm from "./NovoChamadoForm";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
+import { FilePlus2 } from "lucide-react";
 
 export default async function NovoChamadoPage() {
   const session = await getServerSession(authOptions);
@@ -19,8 +20,9 @@ export default async function NovoChamadoPage() {
     include: { departamentos: true },
   });
 
-  // Busca os departamentos com seus tipos e usuários ativos (para a preventiva)
+  // Busca os departamentos com seus tipos e usuários ativos
   const departamentos = await prisma.departamento.findMany({
+    where: { ativo: true },
     include: {
       deptoTipos: {
         include: {
@@ -38,29 +40,44 @@ export default async function NovoChamadoPage() {
     include: {
       children: true,
     },
-    where: { parentId: null }, // Somente locais raiz — os sub-locais virão via children
+    where: { parentId: null, ativo: true },
     orderBy: { nome: "asc" },
   });
 
   return (
-    <div className="min-h-screen bg-neutral-50 50 p-6 md:p-12 transition-colors">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-neutral-50 p-4 md:p-12 transition-colors">
+      <div className="max-w-4xl mx-auto">
+        {/* Cabeçalho de Contexto */}
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h1 className="text-3xl font-bold text-neutral-900 0 tracking-tight">
-            Novo Chamado
-          </h1>
-          <p className="text-neutral-500  mt-1">
-            Preencha os detalhes para abrir uma nova solicitação.
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-brand-navy rounded-lg shadow-sm">
+              <FilePlus2 className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">
+              Abertura de Chamado
+            </h1>
+          </div>
+          <p className="text-neutral-500 ml-1">
+            Informe os detalhes da ocorrência para que nossa equipe técnica
+            possa atuar.
           </p>
         </div>
 
-        <div className="bg-white  rounded-lg shadow-sm border border-neutral-200  p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
-          <NovoChamadoForm
-            departamentos={departamentos}
-            locais={locais}
-            usuarioLogado={usuarioLogado}
-          />
+        {/* Container do Formulário */}
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
+          <div className="p-6 md:p-10">
+            <NovoChamadoForm
+              departamentos={departamentos}
+              locais={locais}
+              usuarioLogado={usuarioLogado}
+            />
+          </div>
         </div>
+
+        <p className="mt-6 text-center text-xs text-neutral-400">
+          O SLA de atendimento inicia-se imediatamente após o registro deste
+          formulário.
+        </p>
       </div>
     </div>
   );

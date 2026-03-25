@@ -51,7 +51,7 @@ const PERFIL_BADGE: Record<
   },
   TECNICO: {
     label: "Técnico (Atendimento)",
-    color: "bg-blue-100 text-blue-700 border-blue-200",
+    color: "bg-brand-navy/10 text-brand-navy border-brand-navy/20",
     icon: User,
   },
   USUARIO: {
@@ -81,7 +81,7 @@ export default function UsuariosClient({
     return usuarios.filter((user) => {
       const matchBusca =
         user.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        user.login.toLowerCase().includes(busca.toLowerCase()) 
+        user.login.toLowerCase().includes(busca.toLowerCase());
 
       const matchPerfil =
         filtroPerfil === "TODOS" || user.perfil === filtroPerfil;
@@ -464,7 +464,7 @@ export default function UsuariosClient({
                       className="sr-only peer"
                       defaultChecked={editingUser.ativo}
                     />
-                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-green"></div>
+                    <div className="w-11 h-6 bg-neutral-50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-green"></div>
                   </div>
                 </label>
 

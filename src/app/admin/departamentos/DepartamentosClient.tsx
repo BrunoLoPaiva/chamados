@@ -49,7 +49,7 @@ function PerfilBadge({ perfil }: { perfil: string }) {
     },
     TECNICO: {
       label: "Técnico",
-      class: "bg-blue-100 text-blue-700 border-blue-200",
+      class: "bg-brand-navy/10 text-brand-navy border-brand-navy/20",
       icon: <Wrench className="w-3 h-3" />,
     },
     USUARIO: {

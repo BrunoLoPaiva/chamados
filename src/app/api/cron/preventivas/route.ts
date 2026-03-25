@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       }
 
       // 2. Calcula a próxima data
-      const novaData = new Date();
+      const novaData = new Date(prev.proximaExecucao);
       novaData.setDate(novaData.getDate() + prev.frequenciaDias);
 
       await tx.preventiva.update({

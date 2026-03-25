@@ -13,9 +13,10 @@ import {
   Building2,
   MapPin,
   LogOut,
+  X,
 } from "lucide-react";
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -83,17 +84,29 @@ export default function Sidebar() {
 
   return (
     <>
-      <nav className="hidden md:flex flex-col w-64 h-screen border-r border-brand-navy/20 bg-brand-navy fixed left-0 top-0 z-40 shadow-xl transition-colors">
-        <div className="p-6">
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity" 
+          onClick={onClose} 
+        />
+      )}
+      <nav className={`flex flex-col w-64 h-screen border-r border-brand-navy/20 bg-brand-navy fixed left-0 top-0 z-50 shadow-xl transition-transform duration-300 md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="p-6 relative">
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 p-2 text-white/50 hover:text-white md:hidden bg-white/5 rounded-md"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div className="flex items-center justify-center">
-            <div className="bg-white/95  rounded-xl shadow-lg w-full flex items-center justify-center border-4 border-[#F2B705] transition-transform hover:scale-105">
+            <div className="bg-white/95 rounded-xl shadow-lg w-full flex items-center justify-center shadow-brand-yellow/20 transition-transform hover:scale-105">
               <Image
                 src="/logo.png"
                 width={180}
                 height={80}
                 sizes="100vw"
                 className="w-full h-auto max-w-[210x]"
-                alt="Logo HelpLog"
+                alt="Logo HelpMe"
                 priority
               />
             </div>

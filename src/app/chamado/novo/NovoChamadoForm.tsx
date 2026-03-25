@@ -1,12 +1,21 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createTicket } from "@/app/actions/tickets";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import {
+  Loader2,
+  MapPin,
+  Building2,
+  Tag,
+  Info,
+  Paperclip,
+  CalendarClock,
+  ChevronRight,
+} from "lucide-react";
 
 export default function NovoChamadoForm({
   departamentos,
@@ -19,46 +28,40 @@ export default function NovoChamadoForm({
   const [deptoId, setDeptoId] = useState("");
   const [loading, setLoading] = useState(false);
   const [isPreventiva, setIsPreventiva] = useState(false);
+  const [tipoId, setTipoId] = useState("");
 
-  // Mapeia o Local selecionado para extrair a lista de filhas (children) caso existam
+  // ── LÓGICA DE LOCALIZAÇÃO ──
   const localSelecionado = locais.find((l: any) => l.id === Number(localId));
   const subLocais = localSelecionado?.children || [];
-
-  // Se não tem subLocais, o valor final pro banco é o localId principal.
-  // Se tem subLocais, o valor final só é válido se a pessoa escolher o subLocal.
   const finalLocalValue = subLocais.length > 0 ? subLocalId : localId;
 
-  // Mapeia o departamento selecionado
+  // ── LÓGICA DE TIPOS (FILTRO DINÂMICO) ──
   const deptoSelecionado = departamentos.find(
     (d: any) => d.id === Number(deptoId),
   );
 
-  // Como usamos a tabela intermediária DeptoTipo, mapeamos os tipos disponíveis
-  // filtrando por local/sublocal selecionado:
-  //   - dt.localId null = aparece em qualquer local
-  //   - dt.localId preenchido = só aparece quando o local pai bate
-  //   - dt.subLocalId preenchido = só aparece quando o sublocal exato está selecionado
-  const effectiveLocalId = Number(subLocalId || localId) || null;
-  const parentLocalId = Number(localId) || null;
+  const tiposDisponiveis = useMemo(() => {
+    if (!deptoSelecionado) return [];
 
-  const tiposDisponiveis = deptoSelecionado
-    ? deptoSelecionado.deptoTipos
-        .filter((dt: any) => {
-          if (!dt.tipo.ativo) return false;
-          if (!dt.localId) return true; // sem restrição de local
-          if (dt.subLocalId) {
-            // Só aparece se o sublocal exato está selecionado
-            return dt.subLocalId === effectiveLocalId;
-          }
-          // Aparece se o local pai bate (independente de sublocal estar ou não selecionado)
-          return (
-            dt.localId === parentLocalId || dt.localId === effectiveLocalId
-          );
-        })
-        .map((dt: any) => dt.tipo)
-    : [];
+    const effectiveLocalId = Number(subLocalId || localId) || null;
+    const parentLocalId = Number(localId) || null;
 
-  // Regra de Negócio: O usuário logado pertence a este departamento?
+    return deptoSelecionado.deptoTipos
+      .filter((dt: any) => {
+        if (!dt.tipo.ativo) return false;
+        if (!dt.localId) return true; // Global
+        if (dt.subLocalId) return dt.subLocalId === effectiveLocalId; // Específico
+        return dt.localId === parentLocalId || dt.localId === effectiveLocalId; // Abrangente
+      })
+      .map((dt: any) => dt.tipo);
+  }, [deptoSelecionado, localId, subLocalId]);
+
+  useEffect(() => {
+    if (tipoId && !tiposDisponiveis.some((t: any) => String(t.id) === tipoId)) {
+      setTipoId("");
+    }
+  }, [tiposDisponiveis, tipoId]);
+
   const pertenceAoDepto = usuarioLogado?.departamentos?.some(
     (d: any) => d.id === Number(deptoId),
   );
@@ -69,67 +72,75 @@ export default function NovoChamadoForm({
       return;
     }
 
+    const anexoFile = formData.get("anexo") as File | null;
+    if (anexoFile && anexoFile.size > 5 * 1024 * 1024) {
+      toast.error("O arquivo anexado ultrapassa o limite de 5MB.");
+      return;
+    }
+
     setLoading(true);
     formData.append("isPreventiva", isPreventiva.toString());
-    // Injetamos o local exato selecionado sobrepondo nomes normais do form
     formData.set("localId", finalLocalValue);
 
     try {
       await createTicket(formData);
       toast.success(
-        isPreventiva
-          ? "Preventiva criada com sucesso!"
-          : "Chamado criado com sucesso!",
+        isPreventiva ? "Preventiva configurada!" : "Chamado aberto!",
       );
       router.push("/dashboard");
     } catch (error) {
-      console.error(error);
-      toast.error("Erro ao criar chamado. Tente novamente.");
+      toast.error("Erro ao registrar chamado. Verifique os dados.");
     } finally {
       setLoading(false);
     }
   }
 
-  // Filtrando para mostrar na primeira combobox APENAS Locais PAI/Roots (que não recebem sub-localização como seu superior)
-  const locaisRoots = locais.filter((l: any) => !l.parentId);
-
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold text-neutral-900  mb-2">
-            Local / Categoria
-          </label>
-          <select
-            value={localId}
-            onChange={(e) => {
-              setLocalId(e.target.value);
-              setSubLocalId(""); // reseta o filho se trocar o pai
-            }}
-            required
-            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 appearance-none transition-colors"
-          >
-            <option value="">Selecione a unidade principal...</option>
-            {locaisRoots.map((l: any) => (
-              <option key={l.id} value={l.id}>
-                {l.nome}
-              </option>
-            ))}
-          </select>
+    <form action={handleSubmit} className="space-y-10">
+      {/* SEÇÃO 1: ONDE ESTÁ O PROBLEMA */}
+      <section className="space-y-5">
+        <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+          <MapPin className="w-4 h-4 text-brand-navy" />
+          <h2 className="text-sm font-bold uppercase tracking-widest text-neutral-500">
+            Localização
+          </h2>
+        </div>
 
-          {/* Segunda combobox caso o local pai exija sub-locais ex: (Praça pedágio -> P1) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-neutral-700">
+              Unidade Principal
+            </label>
+            <select
+              value={localId}
+              onChange={(e) => {
+                setLocalId(e.target.value);
+                setSubLocalId("");
+              }}
+              required
+              className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
+            >
+              <option value="">Selecione...</option>
+              {locais.map((l: any) => (
+                <option key={l.id} value={l.id}>
+                  {l.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {subLocais.length > 0 && (
-            <div className="mt-4 animate-in slide-in-from-top-2 fade-in duration-300">
-              <label className="block text-sm font-semibold text-neutral-900  mb-2">
-                Sub-Local Especifico <span className="text-red-500">*</span>
+            <div className="space-y-2 animate-in slide-in-from-left-4 duration-300">
+              <label className="text-sm font-bold text-brand-navy flex items-center gap-1">
+                <ChevronRight className="w-4 h-4" /> Sub-Local Específico
               </label>
               <select
                 value={subLocalId}
                 onChange={(e) => setSubLocalId(e.target.value)}
                 required
-                className="block w-full px-4 py-3 border border-neutral-300  rounded-md outline-none shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-white appearance-none transition-colors ring-1 ring-blue-500/50"
+                className="w-full px-4 py-3 bg-white border-2 border-brand-navy/30 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-all"
               >
-                <option value="">Selecione a parte interior/unidade...</option>
+                <option value="">Onde exatamente?</option>
                 {subLocais.map((sl: any) => (
                   <option key={sl.id} value={sl.id}>
                     ↳ {sl.nome}
@@ -139,157 +150,200 @@ export default function NovoChamadoForm({
             </div>
           )}
         </div>
+      </section>
 
-        <div>
-          <label className="block text-sm font-semibold text-neutral-900  mb-2">
-            Departamento de Destino
-          </label>
-          <select
-            name="departamentoDestinoId"
-            required
-            value={deptoId}
-            onChange={(e) => {
-              setDeptoId(e.target.value);
-              setIsPreventiva(false); // Reseta a preventiva se mudar de departamento
-            }}
-            className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 appearance-none transition-colors"
-          >
-            <option value="">Selecione a área...</option>
-            {departamentos.map((d: any) => (
-              <option key={d.id} value={d.id}>
-                {d.nome}
+      {/* SEÇÃO 2: QUAL O PROBLEMA */}
+      <section className="space-y-5">
+        <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+          <Building2 className="w-4 h-4 text-brand-navy" />
+          <h2 className="text-sm font-bold uppercase tracking-widest text-neutral-500">
+            Classificação
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-neutral-700">
+              Departamento Responsável
+            </label>
+            <select
+              name="departamentoDestinoId"
+              required
+              value={deptoId}
+              onChange={(e) => {
+                setDeptoId(e.target.value);
+                setIsPreventiva(false);
+              }}
+              className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
+            >
+              <option value="">Para quem é esta demanda?</option>
+              {departamentos.map((d: any) => (
+                <option key={d.id} value={d.id}>
+                  {d.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-neutral-700">
+              Tipo de Solicitação
+            </label>
+            <select
+              name="tipoId"
+              required
+              disabled={!deptoId}
+              value={tipoId}
+              onChange={(e) => setTipoId(e.target.value)}
+              className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all disabled:opacity-50"
+            >
+              <option value="">
+                {deptoId
+                  ? "Selecione o problema..."
+                  : "Aguardando departamento..."}
               </option>
-            ))}
-          </select>
+              {tiposDisponiveis.map((t: any) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome} (SLA: {t.tempoSlaHoras}h)
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <label className="block text-sm font-semibold text-neutral-900  mb-2">
-          Tipo de Solicitação
-        </label>
-        <select
-          name="tipoId"
-          required
-          disabled={!deptoId}
-          className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 appearance-none disabled:opacity-50 transition-colors"
-        >
-          <option value="">
-            {deptoId
-              ? "Selecione o problema..."
-              : "Escolha um departamento primeiro"}
-          </option>
-          {tiposDisponiveis.map((t: any) => (
-            <option key={t.id} value={t.id}>
-              {t.nome} (SLA: {t.tempoSlaHoras}h)
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* SEÇÃO 3: DETALHES */}
+      <section className="space-y-5">
+        <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+          <Tag className="w-4 h-4 text-brand-navy" />
+          <h2 className="text-sm font-bold uppercase tracking-widest text-neutral-500">
+            Descrição
+          </h2>
+        </div>
 
-      <div>
-        <label className="block text-sm font-semibold text-neutral-900  mb-2">
-          Título do Problema
-        </label>
-        <input
-          name="titulo"
-          type="text"
-          required
-          className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 transition-colors"
-          placeholder="Ex: Impressora sem conexão na recepção"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-neutral-900  mb-2">
-          Descrição Detalhada
-        </label>
-        <textarea
-          name="descricao"
-          rows={4}
-          required
-          className="block w-full px-4 py-3 border border-neutral-300  rounded-md shadow-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy   bg-neutral-50 transition-colors"
-          placeholder="Descreva os detalhes e contexto..."
-        ></textarea>
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-neutral-900  mb-2">
-          Anexar Arquivo (Opcional)
-        </label>
-        <input
-          name="anexo"
-          type="file"
-          className="block w-full text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-navy  file:text-neutral-100 hover:file:bg-brand-navy/90   border border-neutral-200  rounded-md p-2 bg-neutral-50  transition-colors file:transition-colors cursor-pointer"
-        />
-      </div>
-
-      {/* ÁREA EXCLUSIVA DE PREVENTIVAS */}
-      {pertenceAoDepto && (
-        <div className="p-5 border border-emerald-200  bg-emerald-50/50  rounded-lg transition-colors">
-          <label className="flex items-center gap-3 cursor-pointer group">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-neutral-700">
+              Título Resumido
+            </label>
             <input
-              type="checkbox"
-              checked={isPreventiva}
-              onChange={(e) => setIsPreventiva(e.target.checked)}
-              className="w-5 h-5 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500   focus:ring-2   transition-colors"
+              name="titulo"
+              type="text"
+              required
+              className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
+              placeholder="Ex: Ar condicionado vazando água"
             />
-            <span className="font-bold text-emerald-800  group-hover:text-emerald-700  transition-colors">
-              Transformar em Preventiva (Gerar recorrentemente)
-            </span>
-          </label>
+          </div>
 
-          {isPreventiva && (
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div>
-                <label className="block text-sm font-semibold text-emerald-800  mb-2">
-                  Frequência (Em dias)
-                </label>
-                <input
-                  name="frequenciaDias"
-                  type="number"
-                  min="1"
-                  required={isPreventiva}
-                  className="block w-full px-4 py-3 border border-emerald-200  rounded-md shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500   bg-white transition-colors"
-                  placeholder="Ex: 30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-emerald-800  mb-2">
-                  Técnico Padrão Responsável
-                </label>
-                <select
-                  name="tecnicoId"
-                  required={isPreventiva}
-                  className="block w-full px-4 py-3 border border-emerald-200  rounded-md shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500   bg-white appearance-none transition-colors"
-                >
-                  <option value="">Atribuir para...</option>
-                  {deptoSelecionado?.usuarios.map((u: any) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-neutral-700 font-sans">
+              Relato Detalhado
+            </label>
+            <textarea
+              name="descricao"
+              rows={4}
+              required
+              className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all resize-none"
+              placeholder="Descreva o que está acontecendo, se houve queda de energia ou outros detalhes..."
+            ></textarea>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+              <Paperclip className="w-4 h-4" /> Anexar Evidência (Foto/PDF)
+            </label>
+            <input
+              name="anexo"
+              type="file"
+              accept="image/*,application/pdf"
+              className="block w-full text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand-navy file:text-white hover:file:bg-brand-navy/90 border-2 border-dashed border-neutral-300 rounded-xl p-6 bg-neutral-50 hover:bg-neutral-100 cursor-pointer transition-colors text-center"
+            />
+          </div>
         </div>
+      </section>
+
+      {/* ÁREA DE PREVENTIVAS (DINÂMICA) */}
+      {pertenceAoDepto && (
+        <section className="animate-in zoom-in-95 duration-300">
+          <div
+            className={`p-6 border rounded-xl transition-all ${isPreventiva ? "border-brand-green bg-brand-green/5 ring-4 ring-brand-green/5" : "border-neutral-200 bg-neutral-50"}`}
+          >
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isPreventiva}
+                onChange={(e) => setIsPreventiva(e.target.checked)}
+                className="w-6 h-6 text-brand-green border-neutral-300 rounded-md focus:ring-brand-green focus:ring-offset-0 transition-all cursor-pointer"
+              />
+              <div>
+                <span
+                  className={`text-sm font-black uppercase tracking-tight ${isPreventiva ? "text-brand-green" : "text-neutral-500"}`}
+                >
+                  Gerar como Manutenção Preventiva
+                </span>
+                <p className="text-xs text-neutral-400">
+                  Esta tarefa será repetida automaticamente conforme a
+                  frequência.
+                </p>
+              </div>
+            </label>
+
+            {isPreventiva && (
+              <div className="mt-6 pt-6 border-t border-brand-green/20 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-brand-green flex items-center gap-1">
+                    <CalendarClock className="w-4 h-4" /> Intervalo (Dias)
+                  </label>
+                  <input
+                    name="frequenciaDias"
+                    type="number"
+                    min="1"
+                    required={isPreventiva}
+                    className="w-full px-4 py-3 border-2 border-brand-green/30 rounded-lg text-sm outline-none focus:border-brand-green bg-white transition-all"
+                    placeholder="Ex: 30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-brand-green flex items-center gap-1">
+                    <Info className="w-4 h-4" /> Técnico Responsável
+                  </label>
+                  <select
+                    name="tecnicoId"
+                    required={isPreventiva}
+                    className="w-full px-4 py-3 border-2 border-brand-green/30 rounded-lg text-sm outline-none focus:border-brand-green bg-white appearance-none transition-all"
+                  >
+                    <option value="">Selecione o responsável...</option>
+                    {deptoSelecionado?.usuarios.map((u: any) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
-      <div className="pt-6 mt-6 border-t border-neutral-200  flex justify-end gap-3">
+      {/* AÇÕES FINAIS */}
+      <div className="pt-8 border-t border-neutral-200 flex flex-col-reverse sm:flex-row justify-end gap-4">
         <Link
           href="/dashboard"
-          className="px-5 py-2.5 text-neutral-600  hover:text-neutral-900 hover:bg-neutral-100   rounded-md font-semibold transition-colors"
+          className="px-6 py-3 text-sm font-bold text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all text-center"
         >
           Cancelar
         </Link>
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-brand-navy text-white rounded-md hover:bg-brand-navy/90 font-bold shadow-sm flex items-center gap-2 disabled:opacity-70 transition-all font-sans"
+          className="px-10 py-3 bg-brand-navy text-white rounded-lg hover:bg-brand-navy/90 font-black shadow-lg shadow-brand-navy/20 flex items-center justify-center gap-2 disabled:opacity-70 transition-all min-w-[160px]"
         >
-          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          {loading ? "Processando..." : "Registrar"}
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            "Registrar Chamado"
+          )}
         </button>
       </div>
     </form>

@@ -59,7 +59,7 @@ export default async function ChamadoDetailsPage({
         <div className="mb-2 animate-in fade-in slide-in-from-left-4 duration-300">
           <Link
             href="/dashboard"
-            className="text-sm text-blue-600 hover:text-blue-700   font-medium flex items-center gap-1 transition-colors"
+            className="text-sm text-brand-navy hover:text-brand-navy/90 font-medium flex items-center gap-1 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar ao Painel
@@ -75,12 +75,12 @@ export default async function ChamadoDetailsPage({
                   #{chamado.codigo}
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase border transition-colors ${chamado.tipo.prioridade === "Alta" ? "bg-red-600 text-white border-red-700   shadow-sm" : chamado.tipo.prioridade === "Media" ? "bg-orange-500 text-white border-orange-600   shadow-sm" : "bg-neutral-100 text-neutral-700 border-neutral-200   "}`}
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase border transition-colors ${chamado.tipo.prioridade === "Alta" ? "bg-red-600 text-white border-red-700 shadow-sm" : chamado.tipo.prioridade === "Media" ? "bg-brand-yellow text-white border-brand-yellow shadow-sm" : "bg-neutral-100 text-neutral-700 border-neutral-200"}`}
                 >
                   {chamado.tipo.prioridade}
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors border ${chamado.status === "SOLICITADO" ? "bg-amber-100 text-amber-700 border-amber-200/50   " : chamado.status === "FECHADO" ? "bg-neutral-100 text-neutral-600 border-neutral-200/50   " : chamado.status === "EM_ATENDIMENTO" ? "bg-blue-600 text-white border-blue-700    shadow-sm" : "bg-purple-100 text-purple-700 border-purple-200/50   "}`}
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors border ${chamado.status === "SOLICITADO" ? "bg-amber-100 text-amber-700 border-amber-200/50" : chamado.status === "FECHADO" ? "bg-neutral-100 text-neutral-600 border-neutral-200/50" : chamado.status === "EM_ATENDIMENTO" ? "bg-brand-navy text-white border-brand-navy shadow-sm" : "bg-purple-100 text-purple-700 border-purple-200/50"}`}
                 >
                   {chamado.status.replace("_", " ")}
                 </span>
@@ -118,7 +118,7 @@ export default async function ChamadoDetailsPage({
                         key={anexo.id}
                         href={`data:${anexo.tipo};base64,${anexo.base64}`}
                         download={anexo.nomeArquivo}
-                        className="flex items-center gap-2 px-4 py-2 bg-white  border border-neutral-200  rounded-md shadow-sm hover:border-blue-500 hover:text-blue-600 transition-colors text-sm font-semibold"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-md shadow-sm hover:border-brand-navy hover:text-brand-navy transition-colors text-sm font-semibold"
                       >
                         <Paperclip className="w-4 h-4 text-neutral-400" />
                         {anexo.nomeArquivo}
@@ -146,8 +146,8 @@ export default async function ChamadoDetailsPage({
             <div className="w-full lg:w-[320px] xl:w-[360px] p-6 md:p-8 bg-neutral-50/50 /20 flex flex-col gap-8">
               {/* Quick Actions (Server Form version) */}
               {chamado.status !== "FECHADO" && (
-                <div className="flex flex-col gap-2 p-5 bg-blue-50  border border-blue-100  rounded-lg">
-                  <span className="text-[10px] font-bold text-blue-800  uppercase tracking-wider mb-2">
+                <div className="flex flex-col gap-2 p-5 bg-brand-navy/5 border border-brand-navy/10 rounded-lg">
+                  <span className="text-[10px] font-bold text-brand-navy uppercase tracking-wider mb-2">
                     Ações Rápidas
                   </span>
 
@@ -166,7 +166,7 @@ export default async function ChamadoDetailsPage({
                       {/* Server Action "Assumir Chamado" using form */}
                       <button
                         type="submit"
-                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-md shadow-sm transition-colors"
+                        className="w-full py-2.5 bg-brand-navy hover:bg-brand-navy/90 text-white text-sm font-bold rounded-md shadow-sm transition-colors"
                       >
                         Atribuir Chamado
                       </button>

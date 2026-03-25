@@ -54,7 +54,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-50  border border-red-200  rounded-md text-sm text-red-600  font-medium text-center animate-pulse transition-colors">
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600 font-medium text-center animate-in fade-in slide-in-from-top-2 duration-300 transition-colors">
             {error}
           </div>
         )}

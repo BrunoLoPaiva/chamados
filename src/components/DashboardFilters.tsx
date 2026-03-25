@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin,
   User,
@@ -36,7 +36,7 @@ export default function DashboardFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Estados inicializados com os valores atuais da URL
+  // Estados inicializados
   const [localId, setLocalId] = useState(searchParams?.get("localId") || "");
   const [criadorId, setCriadorId] = useState(
     searchParams?.get("criadorId") || "",
@@ -44,21 +44,18 @@ export default function DashboardFilters({
   const [tecnicoId, setTecnicoId] = useState(
     searchParams?.get("tecnicoId") || "",
   );
-
   const [dtAberturaDe, setDtAberturaDe] = useState(
     searchParams?.get("dtAberturaDe") || "",
   );
   const [dtAberturaAte, setDtAberturaAte] = useState(
     searchParams?.get("dtAberturaAte") || "",
   );
-
   const [dtVencimentoDe, setDtVencimentoDe] = useState(
     searchParams?.get("dtVencimentoDe") || "",
   );
   const [dtVencimentoAte, setDtVencimentoAte] = useState(
     searchParams?.get("dtVencimentoAte") || "",
   );
-
   const [dtFechamentoDe, setDtFechamentoDe] = useState(
     searchParams?.get("dtFechamentoDe") || "",
   );
@@ -66,46 +63,49 @@ export default function DashboardFilters({
     searchParams?.get("dtFechamentoAte") || "",
   );
 
+  // CORREÇÃO DO BUG: Sincroniza os estados internos sempre que a URL mudar externamente
+  useEffect(() => {
+    setLocalId(searchParams?.get("localId") || "");
+    setCriadorId(searchParams?.get("criadorId") || "");
+    setTecnicoId(searchParams?.get("tecnicoId") || "");
+    setDtAberturaDe(searchParams?.get("dtAberturaDe") || "");
+    setDtAberturaAte(searchParams?.get("dtAberturaAte") || "");
+    setDtVencimentoDe(searchParams?.get("dtVencimentoDe") || "");
+    setDtVencimentoAte(searchParams?.get("dtVencimentoAte") || "");
+    setDtFechamentoDe(searchParams?.get("dtFechamentoDe") || "");
+    setDtFechamentoAte(searchParams?.get("dtFechamentoAte") || "");
+  }, [searchParams]);
+
   const handleApply = () => {
-    // Pegar parâmetros existentes (como aba atual, busca, etc)
     const params = new URLSearchParams(searchParams?.toString() || "");
 
-    // Aplicar ou remover cada filtro
     if (localId) params.set("localId", localId);
     else params.delete("localId");
     if (criadorId) params.set("criadorId", criadorId);
     else params.delete("criadorId");
     if (tecnicoId) params.set("tecnicoId", tecnicoId);
     else params.delete("tecnicoId");
-
     if (dtAberturaDe) params.set("dtAberturaDe", dtAberturaDe);
     else params.delete("dtAberturaDe");
     if (dtAberturaAte) params.set("dtAberturaAte", dtAberturaAte);
     else params.delete("dtAberturaAte");
-
     if (dtVencimentoDe) params.set("dtVencimentoDe", dtVencimentoDe);
     else params.delete("dtVencimentoDe");
     if (dtVencimentoAte) params.set("dtVencimentoAte", dtVencimentoAte);
     else params.delete("dtVencimentoAte");
-
     if (dtFechamentoDe) params.set("dtFechamentoDe", dtFechamentoDe);
     else params.delete("dtFechamentoDe");
     if (dtFechamentoAte) params.set("dtFechamentoAte", dtFechamentoAte);
     else params.delete("dtFechamentoAte");
 
-    // Voltar para a página 1 ao filtrar
     params.set("p", "1");
-
-    // Fechar o offcanvas de filtros
     params.set("filters", "closed");
-
     router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
 
   const handleClear = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
 
-    // Limpar apenas os campos de filtro avançado
     params.delete("localId");
     params.delete("criadorId");
     params.delete("tecnicoId");
@@ -118,21 +118,17 @@ export default function DashboardFilters({
 
     params.set("p", "1");
     params.set("filters", "closed");
-
     router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
 
-  // Separar locais raiz e sub-locais para melhor visualização
   const locaisRaiz = locais.filter((l) => !l.parentId);
 
   return (
     <div className="flex flex-col h-full gap-6 pb-20">
-      {/* SEÇÃO 1: Envolvidos e Local */}
       <div className="space-y-4">
         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2">
           Geral
         </h3>
-
         <div>
           <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5" /> Localização
@@ -195,7 +191,6 @@ export default function DashboardFilters({
         </div>
       </div>
 
-      {/* SEÇÃO 2: Abertura */}
       <div className="space-y-4">
         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2 flex items-center gap-1.5">
           <CalendarPlus className="w-4 h-4" /> Data de Abertura
@@ -226,7 +221,6 @@ export default function DashboardFilters({
         </div>
       </div>
 
-      {/* SEÇÃO 3: SLA / Vencimento */}
       <div className="space-y-4">
         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2 flex items-center gap-1.5">
           <CalendarClock className="w-4 h-4" /> Data de SLA / Venc.
@@ -257,7 +251,6 @@ export default function DashboardFilters({
         </div>
       </div>
 
-      {/* SEÇÃO 4: Fechamento */}
       <div className="space-y-4">
         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2 flex items-center gap-1.5">
           <CalendarCheck className="w-4 h-4" /> Data de Fechamento
@@ -288,7 +281,6 @@ export default function DashboardFilters({
         </div>
       </div>
 
-      {/* AÇÕES FIXADAS NO RODAPÉ DO COMPONENTE */}
       <div className="mt-auto pt-6 border-t border-neutral-200 flex flex-col gap-2 bg-white">
         <button
           onClick={handleApply}

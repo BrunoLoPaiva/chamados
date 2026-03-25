@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-// Função para gerar o Hash Numérico de 10 dígitos
 export async function gerarCodigoChamado() {
   return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }
@@ -26,14 +25,31 @@ export async function createTicket(formData: FormData) {
   const frequenciaDias = Number(formData.get("frequenciaDias"));
   const tecnicoId = Number(formData.get("tecnicoId"));
 
+  if (isPreventiva) {
+    if (!frequenciaDias || frequenciaDias <= 0 || !tecnicoId) {
+      throw new Error("Para preventivas, a frequência de dias e o técnico são obrigatórios.");
+    }
+  }
+
   const anexoFile = formData.get("anexo") as File | null;
   let anexoData = null;
   if (anexoFile && anexoFile.size > 0) {
     const buffer = Buffer.from(await anexoFile.arrayBuffer());
+    const fs = await import("fs");
+    const path = await import("path");
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const safeName = anexoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "");
+    const filename = `${Date.now()}-${safeName}`;
+    const filePath = path.join(uploadDir, filename);
+    fs.writeFileSync(filePath, buffer);
+
     anexoData = {
       nomeArquivo: anexoFile.name,
       tipo: anexoFile.type,
-      base64: buffer.toString("base64"),
+      base64: `/uploads/${filename}`,
     };
   }
 
@@ -91,7 +107,6 @@ export async function createTicket(formData: FormData) {
       });
     }
 
-    // Copia as ações padrão do Tipo de Chamado para o ChamadoAcao
     const acoesPadrao = await tx.acao.findMany({
       where: { tipoId, ativo: true },
     });
@@ -121,6 +136,24 @@ export async function atribuirChamado(formData: FormData) {
 
   if (!codigo || !tecnicoId) throw new Error("Dados inválidos");
 
+  const ticket = await prisma.chamado.findUnique({ where: { codigo } });
+  if (!ticket) throw new Error("Chamado não encontrado");
+
+  const userId = Number((session.user as any).id);
+  const user = await prisma.usuario.findUnique({
+    where: { id: userId },
+    include: { departamentos: true }
+  });
+  
+  if (!user) throw new Error("Usuário não encontrado");
+
+  const isAdmin = user.perfil === "ADMIN";
+  const isMembro = user.departamentos.some(d => d.id === ticket.departamentoDestinoId);
+  
+  if (!isAdmin && !isMembro) {
+    throw new Error("Acesso negado. Você não pertence ao departamento deste chamado.");
+  }
+
   await prisma.chamado.update({
     where: { codigo },
     data: {
@@ -133,7 +166,6 @@ export async function atribuirChamado(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-// NOVA FUNÇÃO: Fechar o Chamado com Solução e Ações
 export async function fecharChamado(formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
@@ -141,7 +173,6 @@ export async function fecharChamado(formData: FormData) {
   const codigo = formData.get("codigo") as string;
   const solucao = formData.get("solucao") as string;
 
-  // Busca quais checkboxes de ações foram marcados (o name deles é acao_ID)
   const acoesIds: number[] = [];
   for (const [key, value] of formData.entries()) {
     if (key.startsWith("acao_") && value === "on") {
@@ -153,18 +184,43 @@ export async function fecharChamado(formData: FormData) {
   let anexoData = null;
   if (anexoFile && anexoFile.size > 0) {
     const buffer = Buffer.from(await anexoFile.arrayBuffer());
+    const fs = await import("fs");
+    const path = await import("path");
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const safeName = anexoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "");
+    const filename = `${Date.now()}-${safeName}`;
+    const filePath = path.join(uploadDir, filename);
+    fs.writeFileSync(filePath, buffer);
+
     anexoData = {
       nomeArquivo: anexoFile.name,
       tipo: anexoFile.type,
-      base64: buffer.toString("base64"),
+      base64: `/uploads/${filename}`,
     };
   }
 
   const ticket = await prisma.chamado.findUnique({ where: { codigo } });
   if (!ticket) throw new Error("Chamado não encontrado");
 
+  const userId = Number((session.user as any).id);
+  const user = await prisma.usuario.findUnique({
+    where: { id: userId },
+    include: { departamentos: true }
+  });
+  
+  if (!user) throw new Error("Usuário não encontrado");
+
+  const isAdmin = user.perfil === "ADMIN";
+  const isMembro = user.departamentos.some(d => d.id === ticket.departamentoDestinoId);
+  
+  if (!isAdmin && !isMembro) {
+    throw new Error("Acesso negado. Você não pertence ao departamento deste chamado.");
+  }
+
   await prisma.$transaction(async (tx: any) => {
-    // 1. Atualiza status e solução
     await tx.chamado.update({
       where: { codigo },
       data: {
@@ -174,7 +230,6 @@ export async function fecharChamado(formData: FormData) {
       },
     });
 
-    // 2. Marca as ações como realizadas
     if (acoesIds.length > 0) {
       await tx.chamadoAcao.updateMany({
         where: {
@@ -185,7 +240,6 @@ export async function fecharChamado(formData: FormData) {
       });
     }
 
-    // 3. Salva anexo de evidência (se houver)
     if (anexoData) {
       await tx.anexo.create({
         data: { chamadoId: ticket.id, ...anexoData },
@@ -197,15 +251,37 @@ export async function fecharChamado(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-export async function bulkAtribuirParaMim(ids: number[]) {
+export async function bulkAtribuir(ids: number[], tecnicoAlvoId: number) {
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
-  const userId = Number((session.user as any).id);
   if (!ids || ids.length === 0) return;
+
+  const targetUser = await prisma.usuario.findUnique({
+    where: { id: tecnicoAlvoId },
+    include: { departamentos: true }
+  });
+
+  if (!targetUser) throw new Error("Técnico alvo não encontrado");
+
+  const chamados = await prisma.chamado.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, departamentoDestinoId: true }
+  });
+
+  const deptosIdsAlvo = targetUser.departamentos.map(d => d.id);
+  const isAdmin = targetUser.perfil === "ADMIN";
+
+  if (!isAdmin) {
+    for (const c of chamados) {
+      if (!deptosIdsAlvo.includes(c.departamentoDestinoId)) {
+        throw new Error("Ação negada: O técnico selecionado não faz parte do departamento exigido por um dos chamados.");
+      }
+    }
+  }
 
   await prisma.chamado.updateMany({
     where: { id: { in: ids } },
-    data: { tecnicoId: userId, status: "EM_ATENDIMENTO" },
+    data: { tecnicoId: tecnicoAlvoId, status: "EM_ATENDIMENTO" },
   });
 
   revalidatePath("/dashboard");
@@ -216,14 +292,47 @@ export async function bulkUpdateStatus(ids: number[], status: string) {
   if (!session?.user) throw new Error("Usuário não autenticado");
   if (!ids || ids.length === 0) return;
 
-  const data: any = { status };
+  // CORREÇÃO DO BUG: Bloqueio de segurança que impede que a requisição POST faça um "bypass" do form de preenchimento.
   if (status === "FECHADO") {
-    data.dataAtendimento = new Date();
+    throw new Error(
+      "Fechamento em lote não é permitido. Acesse o chamado para preencher a solução obrigatória.",
+    );
   }
+
+  const data: any = { status };
 
   await prisma.chamado.updateMany({
     where: { id: { in: ids } },
     data,
+  });
+
+  revalidatePath("/dashboard");
+}
+
+export async function bulkEncerrar(ids: number[], solucao: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Usuário não autenticado");
+  if (!ids || ids.length === 0) return;
+
+  const acoesPendentes = await prisma.chamadoAcao.findFirst({
+    where: {
+      chamadoId: { in: ids },
+      realizado: false
+    },
+    include: { chamado: true }
+  });
+
+  if (acoesPendentes) {
+    throw new Error(`Não é possível fechar em lote pois o chamado #${acoesPendentes.chamado.codigo} possui checklists obrigatórios pendentes.`);
+  }
+
+  await prisma.chamado.updateMany({
+    where: { id: { in: ids } },
+    data: {
+      status: "FECHADO",
+      solucao,
+      dataAtendimento: new Date(),
+    },
   });
 
   revalidatePath("/dashboard");

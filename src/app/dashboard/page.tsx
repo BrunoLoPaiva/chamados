@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { Plus, FileText, Filter as FilterIcon, X } from "lucide-react";
 import DashboardFilters from "@/components/DashboardFilters";
 import TicketsTable from "@/components/TicketsTable";
@@ -145,7 +146,16 @@ export default async function DashboardPage({
   // Rest of Advanced Filters
   if (localId) atendimentosWhere.localId = Number(localId);
   if (criadorId) atendimentosWhere.usuarioCriacaoId = Number(criadorId);
-  if (tecnicoId) atendimentosWhere.tecnicoId = Number(tecnicoId);
+
+  // Lógica da Queue do lado de "Atendimentos" vs TécnicoId
+  if (tecnicoId === "me") {
+    atendimentosWhere.tecnicoId = userId;
+  } else if (tecnicoId) {
+    atendimentosWhere.tecnicoId = Number(tecnicoId);
+  } else if (!hasAdvancedFilterActive && activeTab === "atendimentos") {
+    // Na vista padrão de "Meus Atendimentos" ignoramos os não atribuídos (tecnicoId: null)
+    atendimentosWhere.tecnicoId = { not: null };
+  }
 
   // Date Filters
   if (dtAberturaDe || dtAberturaAte) {
@@ -275,7 +285,7 @@ export default async function DashboardPage({
 
   return (
     <div
-      className={`min-h-screen bg-neutral-50 50 p-4 md:p-6 lg:p-6 transition-colors ${isFilterOpen ? "overflow-hidden" : ""}`}
+      className={`min-h-screen bg-neutral-50 p-4 md:p-6 lg:p-6 transition-colors ${isFilterOpen ? "overflow-hidden" : ""}`}
     >
       <div
         className={
@@ -369,7 +379,7 @@ export default async function DashboardPage({
               scroll={false}
               className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
             />
-            <div className="relative w-full max-w-sm h-full bg-white 50 border-l border-neutral-200  shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
+            <div className="relative w-full max-w-sm h-full bg-white border-l border-neutral-200  shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
               <div className="flex items-center justify-between px-6 pb-4 border-b border-neutral-100 ">
                 <h2 className="text-lg font-bold">Filtros Avançados</h2>
                 <Link
@@ -385,7 +395,9 @@ export default async function DashboardPage({
                 </Link>
               </div>
               <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                <DashboardFilters locais={locaisList} usuarios={usuariosList} />
+                <Suspense fallback={<div className="h-32 bg-neutral-100 animate-pulse rounded-lg"></div>}>
+                  <DashboardFilters locais={locaisList} usuarios={usuariosList} />
+                </Suspense>
               </div>
             </div>
           </div>
@@ -411,7 +423,7 @@ export default async function DashboardPage({
               )}
             </Link>
             <Link
-              href={buildUrl(1, "atendimentos")}
+              href={buildUrl(1, "atendimentos") + "&tecnicoId=me"}
               className={`pb-3 text-sm font-bold transition-all border-b-2 ${
                 activeTab === "atendimentos"
                   ? "border-brand-navy text-brand-navy  "
@@ -453,6 +465,7 @@ export default async function DashboardPage({
                 dir={dir}
                 isSplitView={!!activeTicket}
                 activeTicketCodigo={activeTicket}
+                usuarios={usuariosList}
               />
 
               {/* Paginação */}

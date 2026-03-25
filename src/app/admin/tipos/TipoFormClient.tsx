@@ -27,11 +27,11 @@ export default function TipoFormClient({
   return (
     <form
       action={createAction}
-      className="bg-neutral-50/50 border border-neutral-200 rounded-lg p-5 transition-colors space-y-4"
+      className="bg-neutral-50 border border-neutral-200 rounded-lg p-5 transition-colors space-y-4"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <div>
-          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
             Nome do Problema/Tipo
           </label>
           <input
@@ -44,7 +44,7 @@ export default function TipoFormClient({
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
             Departamento Destino
           </label>
           <select
@@ -62,7 +62,7 @@ export default function TipoFormClient({
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
             Prioridade & SLA
           </label>
           <div className="flex gap-2">
@@ -95,7 +95,7 @@ export default function TipoFormClient({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-neutral-200">
         <div>
-          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
             Local Específico{" "}
             <span className="text-neutral-400 normal-case font-normal">
               (Opcional)
@@ -117,7 +117,7 @@ export default function TipoFormClient({
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
             Sub-Local{" "}
             <span className="text-neutral-400 normal-case font-normal">
               (Opcional)

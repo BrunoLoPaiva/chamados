@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useOptimistic, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -63,20 +63,11 @@ export default function TicketDetailsPanel({
 
   const isMembroDepto = meusDeptosIds.includes(chamado.departamentoDestinoId);
   const podeAtribuir = isAdmin || isMembroDepto;
-  const [optStatus, setOptStatus] = useState(chamado.status);
-  const [optTecnicoId, setOptTecnicoId] = useState(chamado.tecnicoId);
+  const [optStatus, setOptStatus] = useOptimistic(chamado.status);
+  const [optTecnicoId, setOptTecnicoId] = useOptimistic(chamado.tecnicoId);
 
-  const [prevStatusProp, setPrevStatusProp] = useState(chamado.status);
-  const [prevTecnicoProp, setPrevTecnicoProp] = useState(chamado.tecnicoId);
-
-  if (chamado.status !== prevStatusProp) {
-    setPrevStatusProp(chamado.status);
-    setOptStatus(chamado.status);
-  }
-  if (chamado.tecnicoId !== prevTecnicoProp) {
-    setPrevTecnicoProp(chamado.tecnicoId);
-    setOptTecnicoId(chamado.tecnicoId);
-  }
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const closePanel = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -92,10 +83,15 @@ export default function TicketDetailsPanel({
     }
 
     startTransition(async () => {
-      const formData = new FormData();
-      formData.append("codigo", chamado.codigo);
-      formData.append("tecnicoId", String(currentUserId));
-      await atribuirChamado(formData);
+      try {
+        const formData = new FormData();
+        formData.append("codigo", chamado.codigo);
+        formData.append("tecnicoId", String(currentUserId));
+        await atribuirChamado(formData);
+      } catch (error) {
+        // useOptimistic state makes it revert automatically when the transition finishes
+        alert("Erro ao assumir chamado. Tente novamente.");
+      }
     });
   };
 
@@ -104,7 +100,11 @@ export default function TicketDetailsPanel({
     setOptStatus(novoStatus);
 
     startTransition(async () => {
-      await bulkUpdateStatus([chamado.id], novoStatus);
+      try {
+        await bulkUpdateStatus([chamado.id], novoStatus);
+      } catch (error) {
+        alert("Erro ao alterar status. Tente novamente.");
+      }
     });
   };
 
@@ -182,7 +182,7 @@ export default function TicketDetailsPanel({
               Descrição
             </h3>
             <div className="text-sm text-neutral-700  bg-neutral-50 /30 p-4 rounded-md border border-neutral-100  mb-6 leading-relaxed">
-              {chamado.descricao.split("\n").map((linha: string, i: number) => (
+              {(chamado.descricao || "").split("\n").map((linha: string, i: number) => (
                 <p key={i} className="mb-2 last:mb-0 min-h-[1rem]">
                   {linha}
                 </p>
@@ -199,7 +199,7 @@ export default function TicketDetailsPanel({
                   {chamado.anexos.map((anexo: any) => (
                     <a
                       key={anexo.id}
-                      href={`data:${anexo.tipo};base64,${anexo.base64}`}
+                      href={anexo.base64?.startsWith("/uploads/") ? anexo.base64 : `data:${anexo.tipo};base64,${anexo.base64}`}
                       download={anexo.nomeArquivo}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white  border border-neutral-200  rounded-lg hover:border-brand-navy hover:text-brand-navy transition-colors text-xs font-semibold shadow-sm"
                     >
@@ -345,10 +345,10 @@ export default function TicketDetailsPanel({
                       Abertura
                     </span>
                     <span className="text-xs font-mono text-neutral-700  tabular-nums text-right">
-                      {new Date(chamado.dataCriacao).toLocaleString("pt-BR", {
+                      {mounted ? new Date(chamado.dataCriacao).toLocaleString("pt-BR", {
                         dateStyle: "short",
                         timeStyle: "short",
-                      })}
+                      }) : "—"}
                     </span>
                   </div>
 
@@ -357,7 +357,7 @@ export default function TicketDetailsPanel({
                       Vencimento
                     </span>
                     <span className="text-xs font-mono text-neutral-700  tabular-nums text-right pr-2">
-                      {chamado.dataVencimento
+                      {mounted && chamado.dataVencimento
                         ? new Date(chamado.dataVencimento).toLocaleString(
                             "pt-BR",
                             { dateStyle: "short", timeStyle: "short" },

@@ -37,6 +37,10 @@ export async function atualizarUsuario(formData: FormData) {
 
   if (!targetUser) throw new Error("Usuário alvo não encontrado");
 
+  if (!isGlobalAdmin && targetUser.perfil === "ADMIN" && targetUserId !== userId) {
+    throw new Error("Você não tem permissão para alterar os dados de um Administrador Global");
+  }
+
   // Validations
   let perfilFinal = targetUser.perfil;
   
@@ -47,9 +51,6 @@ export async function atualizarUsuario(formData: FormData) {
       // Dept Admin can set to ADMIN_DEPTO, TECNICO or USUARIO, cannot elevate to ADMIN
       if (novoPerfil === "ADMIN") {
         throw new Error("Administradores de departamento não podem conceder perfil Administrador Global");
-      }
-      if (targetUser.perfil === "ADMIN" && targetUserId !== userId) {
-         throw new Error("Você não tem permissão para alterar o perfil de um Administrador Global");
       }
       perfilFinal = novoPerfil;
     }

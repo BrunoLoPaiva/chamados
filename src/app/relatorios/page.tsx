@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { startOfMonth, endOfMonth, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Suspense } from "react";
 import { BarChart3, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 import ExportCSVButton from "@/components/ExportCSVButton";
 import RelatoriosFilters from "@/components/RelatoriosFilters";
@@ -155,13 +156,15 @@ export default async function RelatoriosPage({
           </div>
         </header>
 
-        <RelatoriosFilters
-          departamentos={departamentosAtivos.map((d) => ({
-            id: d.id,
-            nome: d.nome,
-          }))}
-          tecnicos={tecnicosAtivos.map((t) => ({ id: t.id, nome: t.nome }))}
-        />
+        <Suspense fallback={<div className="h-16 bg-neutral-100 animate-pulse rounded-lg mb-6"></div>}>
+          <RelatoriosFilters
+            departamentos={departamentosAtivos.map((d) => ({
+              id: d.id,
+              nome: d.nome,
+            }))}
+            tecnicos={tecnicosAtivos.map((t) => ({ id: t.id, nome: t.nome }))}
+          />
+        </Suspense>
 
         {/* KPIs Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">

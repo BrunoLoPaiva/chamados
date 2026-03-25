@@ -36,7 +36,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-200 flex justify-center transition-colors p-4 md:p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="min-h-screen bg-neutral-50 flex justify-center transition-colors p-4 md:p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <main className="w-full max-w-6xl">{children}</main>
     </div>
   );

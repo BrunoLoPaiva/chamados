@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Search, Filter, X, Calendar } from "lucide-react";
 
 export default function RelatoriosFilters({
@@ -23,15 +23,30 @@ export default function RelatoriosFilters({
     searchParams?.get("tecnico") || "",
   );
 
+  useEffect(() => {
+    setDataInicio(searchParams?.get("inicio") || "");
+    setDataFim(searchParams?.get("fim") || "");
+    setDeptoId(searchParams?.get("depto") || "");
+    setTecnicoId(searchParams?.get("tecnico") || "");
+  }, [searchParams]);
+
   const handleApply = useCallback(() => {
-    const params = new URLSearchParams();
-    if (dataInicio) params.set("inicio", dataInicio);
-    if (dataFim) params.set("fim", dataFim);
-    if (deptoId) params.set("depto", deptoId);
-    if (tecnicoId) params.set("tecnico", tecnicoId);
+    if (dataInicio && dataFim) {
+      if (new Date(dataInicio) > new Date(dataFim)) {
+        alert("A data inicial não pode ser superior à data final.");
+        return;
+      }
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (dataInicio) params.set("inicio", dataInicio); else params.delete("inicio");
+    if (dataFim) params.set("fim", dataFim); else params.delete("fim");
+    if (deptoId) params.set("depto", deptoId); else params.delete("depto");
+    if (tecnicoId) params.set("tecnico", tecnicoId); else params.delete("tecnico");
 
     router.push(`/relatorios?${params.toString()}`);
-  }, [dataInicio, dataFim, deptoId, tecnicoId, router]);
+  }, [dataInicio, dataFim, deptoId, tecnicoId, router, searchParams]);
 
   const handleClear = () => {
     setDataInicio("");
@@ -126,7 +141,7 @@ export default function RelatoriosFilters({
         <div className="flex items-end gap-2 shrink-0">
           <button
             onClick={handleApply}
-            className="px-4 py-2 md:h-9 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-sm shadow-sm transition-colors"
+            className="px-4 py-2 md:h-9 bg-brand-navy hover:bg-brand-navy/90 text-white font-semibold rounded-md text-sm shadow-sm transition-colors"
           >
             Filtrar
           </button>
