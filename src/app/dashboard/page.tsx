@@ -457,7 +457,7 @@ export default async function DashboardPage({
           >
             {/* Esquerda: A tabela (ou tela cheia) */}
             <div
-              className={`${activeTicket ? "hidden lg:block lg:col-span-4 xl:col-span-3" : ""}`}
+              className={`min-w-0 flex flex-col ${activeTicket ? "hidden lg:block lg:col-span-4 xl:col-span-3" : ""}`}
             >
               <TicketsTable
                 chamados={chamadosListagem}

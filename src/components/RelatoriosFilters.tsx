@@ -72,7 +72,7 @@ export default function RelatoriosFilters({
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors text-neutral-700 "
+              className="w-full pl-9 pr-4 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors text-neutral-700 "
             />
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function RelatoriosFilters({
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors text-neutral-700 "
+              className="w-full pl-9 pr-4 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors text-neutral-700 "
             />
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function RelatoriosFilters({
             <select
               value={deptoId}
               onChange={(e) => setDeptoId(e.target.value)}
-              className="w-full pl-9 pr-10 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors text-neutral-700  appearance-none"
+              className="w-full pl-9 pr-10 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors text-neutral-700  appearance-none"
             >
               <option value="">Todos os Departamentos</option>
               {departamentos.map((d) => (
@@ -125,7 +125,7 @@ export default function RelatoriosFilters({
             <select
               value={tecnicoId}
               onChange={(e) => setTecnicoId(e.target.value)}
-              className="w-full pl-9 pr-10 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors text-neutral-700  appearance-none"
+              className="w-full pl-9 pr-10 py-2 bg-neutral-50 50 border border-neutral-200  rounded-md text-sm focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors text-neutral-700  appearance-none"
             >
               <option value="">Todos os Técnicos</option>
               {tecnicos.map((t) => (

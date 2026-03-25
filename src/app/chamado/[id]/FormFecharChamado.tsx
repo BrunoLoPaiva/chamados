@@ -13,7 +13,7 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
     setLoading(true);
     try {
       await fecharChamado(formData);
-    } catch (err) {
+    } catch (_) {
       toast.error("Erro ao fechar o chamado. Tente novamente.");
     } finally {
       setLoading(false);

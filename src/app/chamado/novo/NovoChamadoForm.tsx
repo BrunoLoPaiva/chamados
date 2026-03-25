@@ -88,7 +88,7 @@ export default function NovoChamadoForm({
         isPreventiva ? "Preventiva configurada!" : "Chamado aberto!",
       );
       router.push("/dashboard");
-    } catch (error) {
+    } catch (_) {
       toast.error("Erro ao registrar chamado. Verifique os dados.");
     } finally {
       setLoading(false);

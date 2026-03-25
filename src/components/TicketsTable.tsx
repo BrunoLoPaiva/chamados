@@ -358,8 +358,8 @@ export default function TicketsTable({
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <table className="w-full text-left border-collapse table-fixed">
+      <div className={`overflow-x-auto overflow-y-auto rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-300 ${isSplitView ? "max-h-[calc(100vh-200px)]" : "max-h-[calc(100vh-290px)]"}`}>
+        <table className={`w-full text-left border-collapse ${isSplitView ? "" : "table-fixed min-w-[1024px]"}`}>
           <thead className={isSplitView ? "hidden" : "sticky top-0 z-10 bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"}>
             <tr className="bg-neutral-50 border-b border-neutral-200">
               <th
