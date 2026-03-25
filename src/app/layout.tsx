@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Viarondon | Chamados",
-  description: "Gerencie seus chamados",
+  description: "Sistema interno de chamados da ViaRondon Concessionária de Rodovia S.A",
 };
 
 import Providers from "./Providers";
