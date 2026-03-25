@@ -102,3 +102,66 @@ export async function atualizarUsuario(formData: FormData) {
 
   revalidatePath("/admin/usuarios");
 }
+
+export async function adicionarUsuario(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Não autenticado");
+
+  const userId = Number((session.user as any).id);
+  const loggedUser = await prisma.usuario.findUnique({ 
+    where: { id: userId },
+    include: { departamentos: true }
+  });
+
+  if (!loggedUser) throw new Error("Usuário logado não encontrado");
+
+  const isGlobalAdmin = loggedUser.perfil === "ADMIN";
+  const isDeptAdmin = loggedUser.perfil === "ADMIN_DEPTO" && loggedUser.departamentos.length > 0;
+
+  if (!isGlobalAdmin && !isDeptAdmin) {
+    throw new Error("Acesso negado. Ação restrita a administradores.");
+  }
+
+  const login = formData.get("login") as string;
+  const perfil = formData.get("perfil") as string || "USUARIO";
+  const departamentosSelecionados = formData.getAll("departamentos").map(id => Number(id));
+
+  if (!login || !login.trim()) throw new Error("O campo login (AD) é obrigatório");
+
+  const loginFormatado = login.trim().toLowerCase();
+
+  // Verifica se o usuário já existe
+  const userExistente = await prisma.usuario.findUnique({ where: { login: loginFormatado } });
+  if (userExistente) {
+    throw new Error(`Usuário ${loginFormatado} já está cadastrado no sistema.`);
+  }
+
+  if (!isGlobalAdmin && perfil === "ADMIN") {
+    throw new Error("Administradores de departamento não podem conceder perfil Administrador Global");
+  }
+
+  let deptoConnect: { id: number }[] = [];
+
+  if (isGlobalAdmin) {
+    deptoConnect = departamentosSelecionados.map(id => ({ id }));
+  } else {
+    const managedDeptIds = loggedUser.departamentos.map(d => d.id);
+    const validDepts = departamentosSelecionados.filter(id => managedDeptIds.includes(id));
+    deptoConnect = validDepts.map(id => ({ id }));
+  }
+
+  await prisma.usuario.create({
+    data: {
+      login: loginFormatado,
+      nome: loginFormatado, // placeholder até o LDAP atualizar
+      guid: loginFormatado,
+      perfil: perfil,
+      ativo: true,
+      departamentos: {
+        connect: deptoConnect
+      }
+    }
+  });
+
+  revalidatePath("/admin/usuarios");
+}

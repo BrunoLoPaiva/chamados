@@ -13,7 +13,7 @@ import {
   Edit,
   X,
 } from "lucide-react";
-import { atualizarUsuario } from "@/app/actions/usuarios"; // Importando a sua action
+import { atualizarUsuario, adicionarUsuario } from "@/app/actions/usuarios"; // Importando a sua action
 
 /* Tipagens */
 type Departamento = { id: number; nome: string };
@@ -75,6 +75,7 @@ export default function UsuariosClient({
   // Estados para as ações
   const [isPending, startTransition] = useTransition();
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   // ── FILTROS E PAGINAÇÃO ──
   const usuariosFiltrados = useMemo(() => {
@@ -156,6 +157,21 @@ export default function UsuariosClient({
     });
   };
 
+  // Função do Modal de Criação (Salvar)
+  const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    startTransition(async () => {
+      try {
+        await adicionarUsuario(formData);
+        setIsCreatingUser(false); // Fecha o modal com sucesso
+      } catch (error: any) {
+        alert(error.message || "Erro ao criar usuário.");
+      }
+    });
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* ── CABEÇALHO ── */}
@@ -168,16 +184,13 @@ export default function UsuariosClient({
             Controle de acessos, perfis e permissões do sistema.
           </p>
         </div>
-        {/* <button
-          onClick={() =>
-            alert(
-              "Novos usuários são importados automaticamente ao realizarem o primeiro login via rede (Active Directory).",
-            )
-          }
-          className="px-5 py-2.5 bg-brand-navy text-white font-bold rounded-md hover:bg-brand-navy/90 shadow-sm transition-colors shrink-0"
+        <button
+          onClick={() => setIsCreatingUser(true)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-brand-navy text-white font-bold rounded-md hover:bg-brand-navy/90 shadow-sm transition-colors shrink-0"
         >
-          Sincronizar AD
-        </button> */}
+          <User className="w-4 h-4" />
+          Adicionar Usuário
+        </button>
       </div>
 
       {/* ── BARRA DE FILTROS ── */}
@@ -543,6 +556,115 @@ export default function UsuariosClient({
                   className="px-5 py-2.5 text-sm font-bold text-white bg-brand-navy hover:bg-brand-navy/90 rounded-md transition-colors disabled:opacity-50"
                 >
                   {isPending ? "Salvando..." : "Salvar Alterações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL DE CRIAÇÃO ── */}
+      {isCreatingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-100">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900">
+                  Adicionar Novo Usuário
+                </h3>
+                <p className="text-sm text-neutral-500 mt-1">
+                  Pré-cadastro para liberação de acesso e perfil
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreatingUser(false)}
+                className="text-neutral-400 hover:text-neutral-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <label className="block font-bold text-sm text-neutral-900 mb-2">
+                    Login de Rede (AD)
+                  </label>
+                  <input
+                    type="text"
+                    name="login"
+                    required
+                    placeholder="Ex: nome.sobrenome"
+                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none"
+                  />
+                  <p className="text-[11px] text-brand-yellow font-medium mt-1.5 leading-tight">
+                    Atenção: O nome real deste usuário será preenchido automaticamente quando ele realizar o primeiro login com sucesso usando a senha da rede.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-sm text-neutral-900 mb-2">
+                    Nível de Acesso (Perfil)
+                  </label>
+                  <select
+                    name="perfil"
+                    defaultValue="USUARIO"
+                    className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none"
+                  >
+                    {isGlobalAdmin && (
+                      <option value="ADMIN">Administrador Global</option>
+                    )}
+                    <option value="ADMIN_DEPTO">Gestor de Departamento</option>
+                    <option value="TECNICO">Técnico (Atendimento)</option>
+                    <option value="USUARIO">Usuário Padrão</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-sm text-neutral-900 mb-2">
+                    Departamentos Vinculados
+                  </label>
+                  <div className="max-h-48 overflow-y-auto custom-scrollbar border border-neutral-200 rounded-md p-2 bg-neutral-50 space-y-1">
+                    {departamentosPermitidos.length === 0 ? (
+                      <p className="text-xs text-neutral-400 p-2 italic">
+                        Nenhum departamento disponível para gerenciar.
+                      </p>
+                    ) : (
+                      departamentosPermitidos.map((depto) => (
+                        <label
+                          key={depto.id}
+                          className="flex items-center gap-3 p-2 hover:bg-neutral-200/50 rounded cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            name="departamentos"
+                            value={depto.id}
+                            className="w-4 h-4 rounded border-neutral-300 accent-brand-navy"
+                          />
+                          <span className="text-sm font-medium text-neutral-700">
+                            {depto.nome}
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingUser(false)}
+                  className="px-5 py-2.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="px-5 py-2.5 text-sm font-bold text-white bg-brand-navy hover:bg-brand-navy/90 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {isPending ? "Criando..." : "Cadastrar Usuário"}
                 </button>
               </div>
             </form>

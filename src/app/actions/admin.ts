@@ -122,14 +122,36 @@ export async function removeUsuarioDepartamento(formData: FormData) {
 
 export async function createTipoChamado(formData: FormData) {
     const nome = formData.get("nome") as string;
-    const departamentoId = Number(formData.get("departamentoId"));
     const prioridade = formData.get("prioridade") as string || "Media";
     const tempoSlaHoras = Number(formData.get("tempoSlaHoras")) || 24;
-    const localIdRaw = formData.get("localId") as string;
-    const subLocalIdRaw = formData.get("subLocalId") as string;
+    
+    const departamentosIds = formData.getAll("departamentos").map(String).map(Number).filter(Boolean);
+    const locaisIds = formData.getAll("locais").map(String).map(Number).filter(Boolean);
+    const subLocaisRaw = formData.getAll("sublocais").map(String).filter(Boolean);
 
-    const localId = localIdRaw ? Number(localIdRaw) : null;
-    const subLocalId = subLocalIdRaw ? Number(subLocalIdRaw) : null;
+    if (departamentosIds.length === 0) {
+        // Ignora ou lança erro leve caso não tenha selecionado depto
+        return;
+    }
+
+    const deptoTiposData: any[] = [];
+
+    // Gerar as permutações de Deptos x Locais
+    for (const deptoId of departamentosIds) {
+        if (locaisIds.length === 0 && subLocaisRaw.length === 0) {
+            deptoTiposData.push({ departamentoId: deptoId, localId: null, subLocalId: null });
+        } else {
+            for (const locId of locaisIds) {
+                deptoTiposData.push({ departamentoId: deptoId, localId: locId, subLocalId: null });
+            }
+            for (const subRaw of subLocaisRaw) {
+                const parts = subRaw.split("_");
+                if (parts.length === 2) {
+                    deptoTiposData.push({ departamentoId: deptoId, localId: Number(parts[0]), subLocalId: Number(parts[1]) });
+                }
+            }
+        }
+    }
 
     await prisma.tipoChamado.create({
         data: {
@@ -137,11 +159,7 @@ export async function createTipoChamado(formData: FormData) {
             prioridade,
             tempoSlaHoras,
             deptoTipos: {
-                create: {
-                    departamentoId,
-                    localId,
-                    subLocalId,
-                }
+                create: deptoTiposData
             }
         }
     });
