@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { startOfMonth, endOfMonth, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Suspense } from "react";
@@ -277,60 +278,72 @@ export default async function RelatoriosPage({
                   return (
                     <tr
                       key={c.id}
-                      className="border-b border-neutral-100  hover:bg-neutral-50/50  transition-colors"
+                      className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors group cursor-pointer"
                     >
-                      <td className="px-4 py-3 font-mono text-neutral-500 ">
-                        #{c.codigo}
+                      <td className="p-0">
+                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3 font-mono text-brand-navy font-bold group-hover:underline">
+                          #{c.codigo}
+                        </Link>
                       </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-bold ${c.status === "FECHADO" ? "bg-neutral-100 text-neutral-600  " : "bg-blue-50 text-blue-600  "}`}
-                        >
-                          {c.status.replace("_", " ")}
-                        </span>
+                      <td className="p-0">
+                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-bold ${c.status === "FECHADO" ? "bg-neutral-100 text-neutral-600" : "bg-blue-50 text-blue-600"}`}
+                          >
+                            {c.status.replace("_", " ")}
+                          </span>
+                        </Link>
                       </td>
-                      <td className="px-4 py-3 text-neutral-700 ">
-                        {format(c.dataCriacao, "dd 'de' MMM, HH:mm", {
-                          locale: ptBR,
-                        })}
+                      <td className="p-0 text-neutral-700">
+                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3">
+                          {format(c.dataCriacao, "dd 'de' MMM, HH:mm", {
+                            locale: ptBR,
+                          })}
+                        </Link>
                       </td>
                       <td
-                        className="px-4 py-3 text-neutral-700  truncate max-w-[150px]"
+                        className="p-0 text-neutral-700 max-w-[150px]"
                         title={c.usuarioCriacao?.nome}
                       >
-                        {c.usuarioCriacao?.nome || "Sistema"}
+                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3 truncate">
+                          {c.usuarioCriacao?.nome || "Sistema"}
+                        </Link>
                       </td>
-                      <td className="px-4 py-3 text-neutral-700  truncate max-w-[150px]">
-                        {c.tecnico?.nome || "-"}
+                      <td className="p-0 text-neutral-700 max-w-[150px]">
+                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3 truncate">
+                          {c.tecnico?.nome || "-"}
+                        </Link>
                       </td>
-                      <td className="px-4 py-3 text-neutral-700 ">
-                        {resolucao !== null ? (
-                          <span className="font-mono">
-                            {resolucao.toFixed(1)}h
-                          </span>
-                        ) : (
-                          <span className="text-neutral-400">-</span>
-                        )}
+                      <td className="p-0 text-neutral-700">
+                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3">
+                          {resolucao !== null ? (
+                            <span className="font-mono">
+                              {resolucao.toFixed(1)}h
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400">-</span>
+                          )}
+                        </Link>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase font-bold text-neutral-600 ">
+                      <td className="p-0">
+                        <Link href={`/chamado/${c.codigo}`} className="flex items-center gap-2 px-4 py-3">
+                          <span className="text-xs uppercase font-bold text-neutral-600">
                             {c.tipo?.prioridade || "Média"}
                           </span>
                           {c.status === "FECHADO" &&
                             c.dataVencimento &&
                             (violouSla ? (
                               <span
-                                className="w-2 h-2 rounded-full bg-red-500"
+                                className="w-2 h-2 rounded-full bg-red-500 shrink-0"
                                 title="Violou SLA"
                               ></span>
                             ) : (
                               <span
-                                className="w-2 h-2 rounded-full bg-emerald-500"
+                                className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"
                                 title="No Prazo"
                               ></span>
                             ))}
-                        </div>
+                        </Link>
                       </td>
                     </tr>
                   );

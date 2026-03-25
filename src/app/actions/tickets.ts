@@ -205,6 +205,10 @@ export async function fecharChamado(formData: FormData) {
   const ticket = await prisma.chamado.findUnique({ where: { codigo } });
   if (!ticket) throw new Error("Chamado não encontrado");
 
+  if (ticket.status === "FECHADO") {
+    throw new Error("Este chamado já se encontra FECHADO. É provável que outro colaborador tenha finalizado o atendimento enquanto você estava com a tela aberta.");
+  }
+
   const userId = Number((session.user as any).id);
   const user = await prisma.usuario.findUnique({
     where: { id: userId },
@@ -324,6 +328,16 @@ export async function bulkEncerrar(ids: number[], solucao: string) {
 
   if (acoesPendentes) {
     throw new Error(`Não é possível fechar em lote pois o chamado #${acoesPendentes.chamado.codigo} possui checklists obrigatórios pendentes.`);
+  }
+
+  const chamadosVerificacao = await prisma.chamado.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, codigo: true, status: true }
+  });
+
+  const jaFechados = chamadosVerificacao.filter(c => c.status === "FECHADO");
+  if (jaFechados.length > 0) {
+    throw new Error(`Operação cancelada: O(s) chamado(s) ${jaFechados.map(c => `#${c.codigo}`).join(", ")} já foi/foram fechado(s) por outro colaborador.`);
   }
 
   await prisma.chamado.updateMany({

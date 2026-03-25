@@ -37,6 +37,7 @@ export default function DashboardFilters({
   const searchParams = useSearchParams();
 
   // Estados inicializados
+  const [statusFilter, setStatusFilter] = useState(searchParams?.get("status") || "");
   const [localId, setLocalId] = useState(searchParams?.get("localId") || "");
   const [criadorId, setCriadorId] = useState(
     searchParams?.get("criadorId") || "",
@@ -65,6 +66,7 @@ export default function DashboardFilters({
 
   // CORREÇÃO DO BUG: Sincroniza os estados internos sempre que a URL mudar externamente
   useEffect(() => {
+    setStatusFilter(searchParams?.get("status") || "");
     setLocalId(searchParams?.get("localId") || "");
     setCriadorId(searchParams?.get("criadorId") || "");
     setTecnicoId(searchParams?.get("tecnicoId") || "");
@@ -79,6 +81,8 @@ export default function DashboardFilters({
   const handleApply = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
 
+    if (statusFilter) params.set("status", statusFilter);
+    else params.delete("status");
     if (localId) params.set("localId", localId);
     else params.delete("localId");
     if (criadorId) params.set("criadorId", criadorId);
@@ -106,6 +110,7 @@ export default function DashboardFilters({
   const handleClear = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
 
+    params.delete("status");
     params.delete("localId");
     params.delete("criadorId");
     params.delete("tecnicoId");
@@ -129,6 +134,22 @@ export default function DashboardFilters({
         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-2">
           Geral
         </h3>
+        <div>
+          <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
+            Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
+          >
+            <option value="">Todos os status</option>
+            <option value="SOLICITADO">Apenas Solicitado</option>
+            <option value="EM_ATENDIMENTO">Apenas Em Atendimento</option>
+            <option value="PENDENTE">Apenas Pendente</option>
+            <option value="FECHADO">Apenas Fechado</option>
+          </select>
+        </div>
         <div>
           <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5" /> Localização
