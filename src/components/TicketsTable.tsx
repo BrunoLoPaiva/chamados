@@ -358,8 +358,8 @@ export default function TicketsTable({
         ))}
       </div>
 
-      <div className="w-full rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <table className="w-full text-left border-collapse table-auto">
+      <div className="w-full rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-x-auto max-w-[100vw]">
+        <table className="w-full text-left border-collapse table-auto min-w-[600px] md:min-w-full">
           <thead className={isSplitView ? "hidden" : "bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"}>
             <tr className="bg-neutral-50 border-b border-neutral-200">
               <th

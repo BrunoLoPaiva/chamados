@@ -1,5 +1,12 @@
 import ActiveDirectory from "activedirectory2";
 
+function formatFallbackName(username: string) {
+  return username
+    .split('.')
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export async function authenticateWithAD(
   username: string,
   pass: string,
@@ -10,7 +17,7 @@ export async function authenticateWithAD(
         url: process.env.LDAP_URL || "ldap://10.0.1.2",
         baseDN:
           process.env.LDAP_baseDN ||
-          "OU=ViaRondon Concessionaria de Rodovia SA,DC=VIARONDON,DC=LOCAL",
+          "DC=VIARONDON,DC=LOCAL",
         bindDN: `${username}@viarondon.local`,
         bindCredentials: pass,
       };
@@ -34,13 +41,15 @@ export async function authenticateWithAD(
 
           // Buscar detalhes estendidos do usuário autenticado no AD
           ad.findUser(username, (errFind: any, user: any) => {
+            const fallback = formatFallbackName(username);
+            
             if (errFind || !user) {
               console.warn(`LDAP: Autenticado, mas não foi possível buscar o nome completo de ${username}`, errFind);
-              // Fallback para apenas o login caso a busca falhe
-              return resolve({ login: username, nome: username });
+              // Fallback para nome formatado caso a busca falhe
+              return resolve({ login: username, nome: fallback });
             }
 
-            const fullName = user.displayName || user.cn || user.givenName || username;
+            const fullName = user.displayName || user.cn || user.givenName || fallback;
             console.log(`LDAP: Detalhes encontrados -> Nome: ${fullName}`);
 
             resolve({ login: username, nome: fullName, ...user });

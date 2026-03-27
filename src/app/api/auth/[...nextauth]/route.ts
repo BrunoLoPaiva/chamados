@@ -13,13 +13,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
-        console.log("Tentando login para:", credentials?.username);
         if (!credentials) return null;
+        
+        const username = credentials.username.toLowerCase();
+        console.log("Tentando login para:", username);
 
         try {
           // 1. Tenta autenticar no AD
           const adUser = await authenticateWithAD(
-            credentials.username,
+            username,
             credentials.password,
           );
           console.log("AD Autenticado com sucesso:", adUser);

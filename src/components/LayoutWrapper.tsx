@@ -19,7 +19,7 @@ export default function LayoutWrapper({
   }
 
   return (
-    <div className="flex min-h-screen bg-neutral-50 md:pl-64 pb-16 md:pb-0 transition-all flex-col md:flex-row">
+    <div className="flex min-h-screen bg-neutral-50 md:pl-64 transition-all flex-col md:flex-row">
       <div className="md:hidden flex items-center justify-between bg-brand-navy p-4 text-white sticky top-0 z-30 shadow-md">
         <div className="font-bold text-lg tracking-tight">
           <div className="bg-white/95 rounded-xl shadow-lg w-full flex items-center justify-center shadow-brand-yellow/20 transition-transform hover:scale-105">
