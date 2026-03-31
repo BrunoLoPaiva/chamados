@@ -264,37 +264,36 @@ export default function TiposClient({
       </div>
 
       {/* ── GRID DE TIPOS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {tiposPaginados.map((tipo) => {
           return (
             <div
               key={tipo.id}
-              className="bg-white rounded-lg shadow-sm border border-neutral-200 flex flex-col transition-all hover:shadow-md h-[450px]"
+              className="bg-white rounded-lg shadow-sm border border-neutral-200 flex flex-col transition-all hover:shadow-md min-h-[420px] max-h-[520px]"
             >
-              {/* Header do Card */}
-              <div className="p-5 border-b border-neutral-100 bg-neutral-50/50 rounded-t-lg">
-                <div className="flex justify-between items-start mb-3">
+              {/* HEADER */}
+              <div className="p-4 border-b border-neutral-100 bg-neutral-50/50 rounded-t-lg">
+                <div className="flex justify-between items-start mb-2">
                   <h3
-                    className="text-base font-bold text-neutral-900 leading-tight pr-2 line-clamp-2"
+                    className="text-sm font-semibold text-neutral-900 leading-tight pr-2 line-clamp-2"
                     title={tipo.nome}
                   >
                     {tipo.nome}
                   </h3>
-                  <div className="shrink-0 -mt-1 -mr-1">
-                    <DeleteButton
-                      action={deleteTipoChamado}
-                      id={tipo.id}
-                      disabled={
-                        tipo._count.chamados > 0 || tipo._count.preventivas > 0
-                      }
-                      title="Excluir Tipo"
-                      text={`Deseja excluir "${tipo.nome}"?`}
-                    />
-                  </div>
+
+                  <DeleteButton
+                    action={deleteTipoChamado}
+                    id={tipo.id}
+                    disabled={
+                      tipo._count.chamados > 0 || tipo._count.preventivas > 0
+                    }
+                    title="Excluir Tipo"
+                    text={`Deseja excluir "${tipo.nome}"?`}
+                  />
                 </div>
 
-                {/* Badges: Prioridade e SLA */}
-                <div className="flex flex-wrap gap-2 text-xs mb-4">
+                {/* BADGES */}
+                <div className="flex flex-wrap gap-2 text-xs">
                   <span
                     className={`px-2 py-0.5 rounded uppercase font-bold text-[10px] tracking-wider ${
                       tipo.prioridade === "Alta"
@@ -306,88 +305,96 @@ export default function TiposClient({
                   >
                     {tipo.prioridade}
                   </span>
+
                   <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-100 border border-neutral-200 text-neutral-600 font-bold text-[10px] tracking-wider">
                     <Clock className="w-3 h-3" />
                     SLA: {tipo.tempoSlaHoras}h
                   </span>
                 </div>
-
-                {/* Departamento(s) Alvo */}
-                <div className="space-y-1.5 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
-                  {tipo.deptoTipos.map((dt: any) => (
-                    <div
-                      key={dt.id}
-                      className="bg-white border border-neutral-200 rounded p-2 shadow-sm"
-                    >
-                      <p
-                        className="text-[11px] text-neutral-700 font-medium truncate"
-                        title={dt.departamento.nome}
-                      >
-                        {dt.departamento.nome}
-                      </p>
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-brand-navy/70">
-                        {dt.localId ? (
-                          <>
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            <span className="truncate">
-                              {locaisMap[dt.localId]}
-                              {dt.subLocalId &&
-                                ` → ${locaisMap[dt.subLocalId]}`}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="italic text-neutral-400">
-                            Qualquer localidade
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
-              {/* Checklist / Ações (Com scroll) */}
-              <div className="flex-1 flex flex-col overflow-hidden bg-white">
-                <div className="px-5 pt-4 pb-2 border-b border-neutral-100 flex items-center gap-2">
-                  <ListChecks className="w-4 h-4 text-neutral-400" />
-                  <h4 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
-                    Checklist do Técnico
-                  </h4>
-                </div>
+              {/* CONTEÚDO EM 2 COLUNAS */}
+              <div className="flex-1 grid grid-cols-2 gap-3 p-3 overflow-hidden">
+                {/* COLUNA LOCAIS */}
+                <div className="flex flex-col border border-neutral-100 rounded-md overflow-hidden">
+                  <div className="px-3 py-2 border-b bg-neutral-50 text-[10px] font-bold uppercase text-neutral-500 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    Locais
+                  </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-                  {tipo.acoes.map((acao: any) => (
-                    <div
-                      key={acao.id}
-                      className="flex justify-between items-start text-sm bg-neutral-50 border border-neutral-100 p-2 rounded-md group hover:border-brand-navy/30 transition-colors"
-                    >
-                      <span className="text-neutral-700 text-xs pr-2 leading-snug">
-                        {acao.descricao}
-                      </span>
-                      <form
-                        action={deleteAcao}
-                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[180px]">
+                    {tipo.deptoTipos.map((dt: any) => (
+                      <div
+                        key={dt.id}
+                        className="text-xs bg-white border border-neutral-200 rounded p-2"
                       >
-                        <input type="hidden" name="id" value={acao.id} />
-                        <button
-                          type="submit"
-                          className="text-neutral-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
-                          title="Remover Ação"
+                        <p
+                          className="font-medium truncate"
+                          title={dt.departamento.nome}
                         >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </form>
-                    </div>
-                  ))}
-                  {tipo.acoes.length === 0 && (
-                    <p className="text-xs text-neutral-400 italic text-center py-4">
-                      Nenhuma ação cadastrada.
-                    </p>
-                  )}
+                          {dt.departamento.nome}
+                        </p>
+
+                        <p className="text-[10px] text-neutral-500 truncate">
+                          {dt.localId
+                            ? `${locaisMap[dt.localId]}${
+                                dt.subLocalId
+                                  ? ` → ${locaisMap[dt.subLocalId]}`
+                                  : ""
+                              }`
+                            : "Qualquer localidade"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* COLUNA CHECKLIST */}
+                <div className="flex flex-col border border-neutral-100 rounded-md overflow-hidden">
+                  <div className="px-3 py-2 border-b bg-neutral-50 text-[10px] font-bold uppercase text-neutral-500 flex items-center gap-1">
+                    <ListChecks className="w-3 h-3" />
+                    Checklist
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[180px]">
+                    {tipo.acoes.map((acao: any, i: number) => (
+                      <div
+                        key={acao.id}
+                        className="flex justify-between items-start text-xs bg-neutral-50 border border-neutral-100 p-2 rounded-md group"
+                      >
+                        <span className="pr-2 leading-snug">
+                          <span className="text-neutral-400 mr-1">
+                            {i + 1}.
+                          </span>
+                          {acao.descricao}
+                        </span>
+
+                        <form
+                          action={deleteAcao}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <input type="hidden" name="id" value={acao.id} />
+                          <button
+                            type="submit"
+                            className="text-neutral-400 hover:text-red-600"
+                            title="Remover Ação"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </form>
+                      </div>
+                    ))}
+
+                    {tipo.acoes.length === 0 && (
+                      <p className="text-xs text-neutral-400 italic text-center py-4">
+                        Nenhuma ação cadastrada.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Form de Nova Ação */}
+              {/* INPUT NOVA AÇÃO */}
               <div className="p-3 bg-neutral-50 border-t border-neutral-100 rounded-b-lg">
                 <form action={createAcaoParaTipo} className="flex gap-2">
                   <input type="hidden" name="tipoId" value={tipo.id} />
@@ -396,12 +403,11 @@ export default function TiposClient({
                     name="descricao"
                     required
                     placeholder="Adicionar passo..."
-                    className="flex-1 px-3 py-1.5 text-xs bg-white border border-neutral-300 rounded-md focus:ring-2 focus:ring-brand-navy/20 outline-none transition-colors"
+                    className="flex-1 px-3 py-1.5 text-xs bg-white border border-neutral-300 rounded-md focus:ring-2 focus:ring-brand-navy/20 outline-none"
                   />
                   <button
                     type="submit"
-                    className="px-2.5 py-1.5 bg-white border border-neutral-300 hover:bg-brand-navy hover:text-white hover:border-brand-navy text-neutral-600 text-sm font-medium rounded-md transition-all shrink-0"
-                    title="Adicionar ação"
+                    className="px-2.5 py-1.5 bg-white border border-neutral-300 hover:bg-brand-navy hover:text-white hover:border-brand-navy text-neutral-600 text-sm font-medium rounded-md transition-all"
                   >
                     <Plus className="w-4 h-4" />
                   </button>

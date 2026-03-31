@@ -25,7 +25,11 @@ interface Props {
  *   O usuário pode desmarcar filhos individualmente depois.
  * - Se TODOS os filhos de um pai forem desmarcados individualmente, o pai fica desmarcado também.
  */
-export default function TipoFormClient({ departamentos, locais, createAction }: Props) {
+export default function TipoFormClient({
+  departamentos,
+  locais,
+  createAction,
+}: Props) {
   // Conjunto de IDs de locais-pai sem filhos que estão marcados
   const [selectedRoots, setSelectedRoots] = useState<Set<number>>(new Set());
 
@@ -39,20 +43,26 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
   const isParentFullySelected = useCallback(
     (local: LocalItem) => {
       if (local.children.length === 0) return selectedRoots.has(local.id);
-      return local.children.every((c) => selectedSubs.has(`${local.id}_${c.id}`));
+      return local.children.every((c) =>
+        selectedSubs.has(`${local.id}_${c.id}`),
+      );
     },
-    [selectedRoots, selectedSubs]
+    [selectedRoots, selectedSubs],
   );
 
   // Verifica se um pai (com filhos) está "parcialmente" selecionado (indeterminate)
   const isParentPartiallySelected = useCallback(
     (local: LocalItem) => {
       if (local.children.length === 0) return false;
-      const someSelected = local.children.some((c) => selectedSubs.has(`${local.id}_${c.id}`));
-      const allSelected = local.children.every((c) => selectedSubs.has(`${local.id}_${c.id}`));
+      const someSelected = local.children.some((c) =>
+        selectedSubs.has(`${local.id}_${c.id}`),
+      );
+      const allSelected = local.children.every((c) =>
+        selectedSubs.has(`${local.id}_${c.id}`),
+      );
       return someSelected && !allSelected;
     },
-    [selectedSubs]
+    [selectedSubs],
   );
 
   const handleParentChange = useCallback(
@@ -86,11 +96,15 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
         }
       }
     },
-    []
+    [],
   );
 
   const handleChildChange = useCallback(
-    (local: LocalItem, child: { id: number; nome: string }, checked: boolean) => {
+    (
+      local: LocalItem,
+      child: { id: number; nome: string },
+      checked: boolean,
+    ) => {
       const key = `${local.id}_${child.id}`;
       setSelectedSubs((prev) => {
         const next = new Set(prev);
@@ -99,7 +113,7 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
         return next;
       });
     },
-    []
+    [],
   );
 
   const toggleExpanded = useCallback((id: number) => {
@@ -179,16 +193,31 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
             </label>
             <div className="max-h-48 overflow-y-auto custom-scrollbar border border-neutral-300 rounded-md p-2 bg-white space-y-1">
               {departamentos.map((d) => (
-                <label key={d.id} className="flex items-center gap-2 p-1.5 hover:bg-neutral-50 rounded cursor-pointer transition-colors">
-                  <input type="checkbox" name="departamentos" value={d.id} className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer" />
-                  <span className="text-sm font-medium text-neutral-700">{d.nome}</span>
+                <label
+                  key={d.id}
+                  className="flex items-center gap-2 p-1.5 hover:bg-neutral-50 rounded cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    name="departamentos"
+                    value={d.id}
+                    className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-neutral-700">
+                    {d.nome}
+                  </span>
                 </label>
               ))}
               {departamentos.length === 0 && (
-                <p className="text-xs text-neutral-400 italic p-1">Nenhum departamento cadastrado</p>
+                <p className="text-xs text-neutral-400 italic p-1">
+                  Nenhum departamento cadastrado
+                </p>
               )}
             </div>
-            <p className="text-[10px] text-neutral-500 mt-1">Selecione 1 ou mais departamentos que receberão os chamados deste tipo.</p>
+            <p className="text-[10px] text-neutral-500 mt-1">
+              Selecione 1 ou mais departamentos que receberão os chamados deste
+              tipo.
+            </p>
           </div>
         </div>
 
@@ -196,11 +225,14 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
           <div className="flex items-center justify-between mb-2">
             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Locais e Sub-Locais{" "}
-              <span className="text-neutral-400 normal-case font-normal">(Opcional)</span>
+              <span className="text-neutral-400 normal-case font-normal">
+                (Opcional)
+              </span>
             </label>
             {totalSelecionados > 0 && (
               <span className="text-[10px] font-bold px-2 py-0.5 bg-brand-navy/10 text-brand-navy rounded-full">
-                {totalSelecionados} selecionado{totalSelecionados !== 1 ? "s" : ""}
+                {totalSelecionados} selecionado
+                {totalSelecionados !== 1 ? "s" : ""}
               </span>
             )}
           </div>
@@ -213,7 +245,10 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
               const partiallyChecked = isParentPartiallySelected(local);
 
               return (
-                <div key={local.id} className="border-b border-neutral-100 last:border-b-0">
+                <div
+                  key={local.id}
+                  className="border-b border-neutral-100 last:border-b-0"
+                >
                   {/* Linha do Local Pai */}
                   <div className="flex items-center gap-1 p-2 bg-neutral-50 hover:bg-neutral-100 transition-colors">
                     {/* Checkbox do pai */}
@@ -225,7 +260,9 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
                         ref={(el) => {
                           if (el) el.indeterminate = partiallyChecked;
                         }}
-                        onChange={(e) => handleParentChange(local, e.target.checked)}
+                        onChange={(e) =>
+                          handleParentChange(local, e.target.checked)
+                        }
                       />
                       <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                       <span className="text-sm font-bold text-neutral-800 truncate">
@@ -244,7 +281,11 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
                         type="button"
                         onClick={() => toggleExpanded(local.id)}
                         className="p-1 rounded hover:bg-neutral-200 transition-colors shrink-0 text-neutral-500"
-                        title={isExpanded ? "Recolher sub-locais" : "Expandir sub-locais"}
+                        title={
+                          isExpanded
+                            ? "Recolher sub-locais"
+                            : "Expandir sub-locais"
+                        }
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-3.5 h-3.5" />
@@ -262,14 +303,25 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
                         const key = `${local.id}_${child.id}`;
                         const isChecked = selectedSubs.has(key);
                         return (
-                          <label key={child.id} className="flex items-center gap-2 p-1.5 hover:bg-neutral-50 rounded cursor-pointer transition-colors">
+                          <label
+                            key={child.id}
+                            className="flex items-center gap-2 p-1.5 hover:bg-neutral-50 rounded cursor-pointer transition-colors"
+                          >
                             <input
                               type="checkbox"
                               className="w-3.5 h-3.5 rounded border-neutral-300 accent-neutral-600 cursor-pointer"
                               checked={isChecked}
-                              onChange={(e) => handleChildChange(local, child, e.target.checked)}
+                              onChange={(e) =>
+                                handleChildChange(
+                                  local,
+                                  child,
+                                  e.target.checked,
+                                )
+                              }
                             />
-                            <span className="text-xs text-neutral-600">{child.nome}</span>
+                            <span className="text-xs text-neutral-600">
+                              {child.nome}
+                            </span>
                           </label>
                         );
                       })}
@@ -279,12 +331,16 @@ export default function TipoFormClient({ departamentos, locais, createAction }: 
               );
             })}
             {locais.length === 0 && (
-              <p className="text-xs text-neutral-400 italic p-3">Nenhum local cadastrado</p>
+              <p className="text-xs text-neutral-400 italic p-3">
+                Nenhum local cadastrado
+              </p>
             )}
           </div>
           <p className="text-[10px] text-neutral-500 mt-1 leading-tight">
-            Selecionar um local pai marca todos os seus sub-locais automaticamente. Você pode desmarcar sub-locais individualmente depois.
-            Se nada for selecionado, o tipo valerá para qualquer localidade.
+            Selecionar um local pai marca todos os seus sub-locais
+            automaticamente. Você pode desmarcar sub-locais individualmente
+            depois. Se nada for selecionado, o tipo valerá para qualquer
+            localidade.
           </p>
         </div>
       </div>
