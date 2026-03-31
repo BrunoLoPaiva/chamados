@@ -48,6 +48,12 @@ export default async function LocaisPage() {
     {} as Record<number, typeof locais>,
   );
 
+  // Pais legítimos: apenas categorias que TÊM pelo menos um filho
+  // Usado no seletor "Mover para..." para corrigir locais órfãos
+  const paiOptions = categorias
+    .filter((c) => (locaisPorCategoria[c.id] || []).length > 0)
+    .map((c) => ({ id: c.id, nome: c.nome }));
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8">
@@ -63,6 +69,7 @@ export default async function LocaisPage() {
       <LocaisClient
         categorias={categorias}
         locaisPorCategoria={locaisPorCategoria}
+        paiOptions={paiOptions}
       />
     </div>
   );

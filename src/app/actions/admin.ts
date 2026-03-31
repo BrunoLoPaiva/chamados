@@ -9,7 +9,7 @@ async function verifyGlobalAdmin() {
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("Não autenticado");
 
-    const userId = Number((session.user as any).id);
+    const userId = Number((session.user as { id?: string | number }).id);
     const user = await prisma.usuario.findUnique({ where: { id: userId } });
 
     if (user?.perfil !== "ADMIN") {
@@ -50,6 +50,21 @@ export async function deleteLocal(formData: FormData) {
     });
 
     revalidatePath("/admin/locais");
+    revalidatePath("/chamado/novo");
+}
+
+export async function updateLocalParent(formData: FormData) {
+    await verifyGlobalAdmin();
+    const id = Number(formData.get("id"));
+    const parentId = formData.get("parentId") as string;
+
+    await prisma.local.update({
+        where: { id },
+        data: { parentId: parentId ? parseInt(parentId, 10) : null },
+    });
+
+    revalidatePath("/admin/locais");
+    revalidatePath("/admin/tipos");
     revalidatePath("/chamado/novo");
 }
 

@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo } from "react";
-import { createLocal, deleteLocal } from "@/app/actions/admin";
+import { createLocal, deleteLocal, updateLocalParent } from "@/app/actions/admin";
 import DeleteButton from "@/components/DeleteButton";
 import {
   ChevronDown,
@@ -18,11 +18,14 @@ type Categoria = any;
 interface LocaisClientProps {
   categorias: Categoria[];
   locaisPorCategoria: Record<number, Categoria[]>;
+  // Apenas os pais legítimos (com filhos) para o seletor de "mover para"
+  paiOptions: { id: number; nome: string }[];
 }
 
 export default function LocaisClient({
   categorias,
   locaisPorCategoria,
+  paiOptions,
 }: LocaisClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set());
@@ -38,7 +41,6 @@ export default function LocaisClient({
     const lowerTerm = searchTerm.toLowerCase();
     const resultCats: Categoria[] = [];
     const resultLocais: Record<number, Categoria[]> = {};
-    const autoExpanded = new Set<number>();
 
     categorias.forEach((cat) => {
       const matchCat = cat.nome.toLowerCase().includes(lowerTerm);
@@ -51,14 +53,18 @@ export default function LocaisClient({
         resultCats.push(cat);
         resultLocais[cat.id] =
           matchSubLocais.length > 0 ? matchSubLocais : subLocais;
-        if (searchTerm.trim()) autoExpanded.add(cat.id);
       }
     });
 
-    setExpandedCats((prev) => new Set([...prev, ...autoExpanded]));
-
     return { filteredCategorias: resultCats, filteredLocais: resultLocais };
   }, [categorias, locaisPorCategoria, searchTerm]);
+
+  // Derived: when there's a search, auto-expand matched categories without setState side-effects
+  const effectiveExpandedCats = useMemo(() => {
+    if (!searchTerm.trim()) return expandedCats;
+    const matchedIds = filteredCategorias.map((c) => c.id);
+    return new Set([...expandedCats, ...matchedIds]);
+  }, [searchTerm, filteredCategorias, expandedCats]);
 
   const toggleCategory = (id: number) => {
     setExpandedCats((prev) => {
@@ -164,15 +170,17 @@ export default function LocaisClient({
             )}
 
             {filteredCategorias.map((categoria) => {
-              const isExpanded = expandedCats.has(categoria.id);
+              const isExpanded = effectiveExpandedCats.has(categoria.id);
               const subLocais = filteredLocais[categoria.id] || [];
               const hasChildren = subLocais.length > 0;
+              // Locais raiz SEM filhos são potencialmente cadastrados errado
+              const isOrphaned = !hasChildren && paiOptions.length > 0;
 
               return (
                 <React.Fragment key={`cat-${categoria.id}`}>
                   <tr
                     onClick={() => hasChildren && toggleCategory(categoria.id)}
-                    className={`border-b border-neutral-200 transition-colors ${hasChildren ? "cursor-pointer hover:bg-neutral-50" : "bg-white"} ${isExpanded ? "bg-neutral-50/80" : "bg-white"}`}
+                    className={`border-b border-neutral-200 transition-colors ${hasChildren ? "cursor-pointer hover:bg-neutral-50" : "bg-white"} ${isExpanded ? "bg-neutral-50/80" : "bg-white"} ${isOrphaned ? "bg-amber-50/30" : ""}`}
                   >
                     <td className="py-3 px-4 font-bold text-neutral-900 flex items-center gap-2 select-none">
                       {hasChildren ? (
@@ -187,7 +195,33 @@ export default function LocaisClient({
                         <span className="w-4" />
                       )}
                       <FolderTree className="w-4 h-4 text-brand-navy/60" />
-                      {categoria.nome}
+                      <span className={isOrphaned ? "text-amber-700" : ""}>{categoria.nome}</span>
+                      {isOrphaned && (
+                        <form
+                          action={updateLocalParent}
+                          className="flex items-center gap-1 ml-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input type="hidden" name="id" value={categoria.id} />
+                          <select
+                            name="parentId"
+                            className="text-xs px-2 py-0.5 border border-amber-300 bg-amber-50 rounded text-amber-800 focus:ring-1 focus:ring-amber-400 outline-none"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Mover para...</option>
+                            {paiOptions.map((p) => (
+                              <option key={p.id} value={p.id}>{p.nome}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="submit"
+                            className="text-xs px-2 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded font-bold transition-colors"
+                            title="Mover este local para a categoria selecionada"
+                          >
+                            Mover
+                          </button>
+                        </form>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-neutral-600 text-center font-mono text-sm">
                       {categoria._count?.chamados || 0}

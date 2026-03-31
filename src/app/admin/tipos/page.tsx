@@ -60,16 +60,37 @@ export default async function TiposPage() {
     orderBy: { nome: "asc" },
   });
 
-  const locaisRaiz = await prisma.local.findMany({
-    where: { parentId: null },
-    include: { children: true },
+  // Busca todos os locais ativos e constrói a árvore em memória.
+  // Isso evita que locais filhos com parentId incorreto apareçam como raiz,
+  // e garante que locais inativos não sejam exibidos em nenhum nível.
+  const todosLocaisAtivos = await prisma.local.findMany({
+    where: { ativo: true },
+    select: { id: true, nome: true, parentId: true },
     orderBy: { nome: "asc" },
   });
 
-  const todosLocais = await prisma.local.findMany({
-    select: { id: true, nome: true },
-  });
-  const locaisMap = Object.fromEntries(todosLocais.map((l) => [l.id, l.nome]));
+  const locaisMap = Object.fromEntries(todosLocaisAtivos.map((l) => [l.id, l.nome]));
+
+  // Conjunto de IDs de locais ativos para validar referências de parentId
+  const idsAtivos = new Set(todosLocaisAtivos.map((l) => l.id));
+
+  // Monta a árvore: apenas locais cujo parentId é null OU cujo pai também é ativo
+  const childrenPorPai = new Map<number, { id: number; nome: string }[]>();
+  for (const local of todosLocaisAtivos) {
+    if (local.parentId !== null && idsAtivos.has(local.parentId)) {
+      if (!childrenPorPai.has(local.parentId)) childrenPorPai.set(local.parentId, []);
+      childrenPorPai.get(local.parentId)!.push({ id: local.id, nome: local.nome });
+    }
+  }
+
+  // Locais raiz: parentId null E que estão ativos
+  const locaisRaiz = todosLocaisAtivos
+    .filter((l) => l.parentId === null)
+    .map((l) => ({
+      id: l.id,
+      nome: l.nome,
+      children: childrenPorPai.get(l.id) ?? [],
+    }));
 
   return (
     <TiposClient
