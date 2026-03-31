@@ -124,30 +124,42 @@ export async function createTipoChamado(formData: FormData) {
     const nome = formData.get("nome") as string;
     const prioridade = formData.get("prioridade") as string || "Media";
     const tempoSlaHoras = Number(formData.get("tempoSlaHoras")) || 24;
-    
+
     const departamentosIds = formData.getAll("departamentos").map(String).map(Number).filter(Boolean);
+
+    // "locais" = IDs de locais-pai SEM filhos (seleção direta do local inteiro)
     const locaisIds = formData.getAll("locais").map(String).map(Number).filter(Boolean);
+
+    // "sublocais" = strings "paiId_filhoId" (sempre referenciando um sub-local específico)
     const subLocaisRaw = formData.getAll("sublocais").map(String).filter(Boolean);
 
     if (departamentosIds.length === 0) {
-        // Ignora ou lança erro leve caso não tenha selecionado depto
         return;
     }
 
-    const deptoTiposData: any[] = [];
+    const deptoTiposData: { departamentoId: number; localId: number | null; subLocalId: number | null }[] = [];
 
-    // Gerar as permutações de Deptos x Locais
     for (const deptoId of departamentosIds) {
-        if (locaisIds.length === 0 && subLocaisRaw.length === 0) {
+        const hasAnyLocation = locaisIds.length > 0 || subLocaisRaw.length > 0;
+
+        if (!hasAnyLocation) {
+            // Nenhum local selecionado → vale para qualquer localidade
             deptoTiposData.push({ departamentoId: deptoId, localId: null, subLocalId: null });
         } else {
+            // Locais-pai sem filhos: registra como (localId, null) para indicar "local inteiro"
             for (const locId of locaisIds) {
                 deptoTiposData.push({ departamentoId: deptoId, localId: locId, subLocalId: null });
             }
+
+            // Sub-locais específicos: registra como (localPaiId, filhoId)
             for (const subRaw of subLocaisRaw) {
                 const parts = subRaw.split("_");
                 if (parts.length === 2) {
-                    deptoTiposData.push({ departamentoId: deptoId, localId: Number(parts[0]), subLocalId: Number(parts[1]) });
+                    deptoTiposData.push({
+                        departamentoId: deptoId,
+                        localId: Number(parts[0]),
+                        subLocalId: Number(parts[1]),
+                    });
                 }
             }
         }
@@ -159,9 +171,9 @@ export async function createTipoChamado(formData: FormData) {
             prioridade,
             tempoSlaHoras,
             deptoTipos: {
-                create: deptoTiposData
-            }
-        }
+                create: deptoTiposData,
+            },
+        },
     });
 
     revalidatePath("/admin/tipos");

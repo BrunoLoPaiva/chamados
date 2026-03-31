@@ -313,7 +313,7 @@ export default function TiposClient({
                 </div>
 
                 {/* Departamento(s) Alvo */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
                   {tipo.deptoTipos.map((dt: any) => (
                     <div
                       key={dt.id}
