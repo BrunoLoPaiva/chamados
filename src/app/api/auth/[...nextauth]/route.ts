@@ -14,8 +14,11 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials) return null;
-        
-        const username = credentials.username.toLowerCase();
+
+        const username = credentials.username
+          .split("@")[0]
+          .trim()
+          .toLowerCase();
         console.log("Tentando login para:", username);
 
         try {
@@ -35,14 +38,14 @@ export const authOptions: NextAuthOptions = {
               nome: adUser.nome,
               guid: adUser.login,
             },
-            include: { departamentos: true }
+            include: { departamentos: true },
           });
 
           return {
             id: user.id.toString(),
             name: user.nome,
             email: user.perfil,
-            isDeptoAdmin: user.departamentos.length > 0
+            isDeptoAdmin: user.departamentos.length > 0,
           } as any;
         } catch (error) {
           console.error("Erro no LDAP:", error);
