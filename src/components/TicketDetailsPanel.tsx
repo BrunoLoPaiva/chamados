@@ -10,10 +10,15 @@ import {
   UserCog,
   Paperclip,
   Hand,
+  Trash2,
   Expand,
 } from "lucide-react";
 import FormFecharChamado from "@/app/chamado/[id]/FormFecharChamado";
-import { atribuirChamado, bulkUpdateStatus } from "@/app/actions/tickets";
+import {
+  atribuirChamado,
+  bulkUpdateStatus,
+  excluirChamado,
+} from "@/app/actions/tickets";
 import TicketTimeline from "./TicketTimeline";
 
 // ──────────────────────────────────────────────
@@ -112,6 +117,26 @@ export default function TicketDetailsPanel({
     optStatus === "EM_ATENDIMENTO" &&
     (optTecnicoId === currentUserId || isAdmin);
 
+  const handleExcluirChamado = () => {
+    if (
+      !confirm(
+        "Tem certeza ABSOLUTA que deseja excluir este chamado e todo o seu histórico? Esta ação não pode ser desfeita.",
+      )
+    ) {
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await excluirChamado(chamado.codigo);
+        // Fecha o painel voltando pra listagem padrão
+        closePanel();
+      } catch (error: any) {
+        alert(error.message || "Erro ao excluir o chamado.");
+      }
+    });
+  };
+
   return (
     <div className="bg-white  rounded-lg shadow-xl border border-neutral-200  flex flex-col max-h-[calc(100vh-6rem)] sticky top-6 animate-in fade-in slide-in-from-right-4 duration-300 min-w-0">
       {/* ── Header: Actions & Close ── */}
@@ -182,11 +207,13 @@ export default function TicketDetailsPanel({
               Descrição
             </h3>
             <div className="text-sm text-neutral-700  bg-neutral-50 /30 p-4 rounded-md border border-neutral-100  mb-6 leading-relaxed">
-              {(chamado.descricao || "").split("\n").map((linha: string, i: number) => (
-                <p key={i} className="mb-2 last:mb-0 min-h-[1rem]">
-                  {linha}
-                </p>
-              ))}
+              {(chamado.descricao || "")
+                .split("\n")
+                .map((linha: string, i: number) => (
+                  <p key={i} className="mb-2 last:mb-0 min-h-[1rem]">
+                    {linha}
+                  </p>
+                ))}
             </div>
 
             {/* Anexos */}
@@ -199,7 +226,11 @@ export default function TicketDetailsPanel({
                   {chamado.anexos.map((anexo: any) => (
                     <a
                       key={anexo.id}
-                      href={anexo.base64?.startsWith("/uploads/") ? anexo.base64 : `data:${anexo.tipo};base64,${anexo.base64}`}
+                      href={
+                        anexo.base64?.startsWith("/uploads/")
+                          ? anexo.base64
+                          : `data:${anexo.tipo};base64,${anexo.base64}`
+                      }
                       download={anexo.nomeArquivo}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white  border border-neutral-200  rounded-lg hover:border-brand-navy hover:text-brand-navy transition-colors text-xs font-semibold shadow-sm"
                     >
@@ -266,6 +297,16 @@ export default function TicketDetailsPanel({
                           className="w-full py-2 text-sm font-semibold bg-white  border border-neutral-200  text-neutral-600  rounded-lg shadow-sm hover:bg-neutral-50  transition-colors disabled:opacity-50"
                         >
                           Retomar Atendimento
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={handleExcluirChamado}
+                          disabled={isPending}
+                          className="flex items-center justify-center gap-2 w-full py-2 mt-4 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Excluir Definitivamente
                         </button>
                       )}
                     </>
@@ -345,10 +386,15 @@ export default function TicketDetailsPanel({
                       Abertura
                     </span>
                     <span className="text-xs font-mono text-neutral-700  tabular-nums text-right">
-                      {mounted ? new Date(chamado.dataCriacao).toLocaleString("pt-BR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      }) : "—"}
+                      {mounted
+                        ? new Date(chamado.dataCriacao).toLocaleString(
+                            "pt-BR",
+                            {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            },
+                          )
+                        : "—"}
                     </span>
                   </div>
 

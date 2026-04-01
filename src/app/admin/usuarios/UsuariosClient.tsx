@@ -597,9 +597,16 @@ export default function UsuariosClient({
                     placeholder="Ex: nome.sobrenome"
                     className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none"
                   />
-                  <p className="text-[11px] text-brand-yellow font-medium mt-1.5 leading-tight">
-                    Atenção: O nome real deste usuário será preenchido automaticamente quando ele realizar o primeiro login com sucesso usando a senha da rede.
-                  </p>
+                  <label className="block font-bold text-sm text-neutral-900 mb-2">
+                    Nome Completo / Amigável
+                  </label>
+                  <input
+                    type="text"
+                    name="nome"
+                    required
+                    placeholder="Ex: Bruno Lopes de Paiva"
+                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-md shadow-sm text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none"
+                  />
                 </div>
 
                 <div>

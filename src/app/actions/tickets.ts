@@ -369,3 +369,40 @@ export async function bulkEncerrar(ids: number[], solucao: string) {
 
   revalidatePath("/dashboard");
 }
+
+export async function excluirChamado(codigo: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Usuário não autenticado");
+
+  const userId = Number((session.user as any).id);
+  const user = await prisma.usuario.findUnique({ where: { id: userId } });
+
+  // Segurança extra: Apenas Admin Global pode deletar chamados
+  if (user?.perfil !== "ADMIN") {
+    throw new Error("Apenas Administradores Globais podem excluir chamados.");
+  }
+
+  const ticket = await prisma.chamado.findUnique({ where: { codigo } });
+  if (!ticket) throw new Error("Chamado não encontrado");
+
+  // Deleta tudo atrelado ao chamado numa transaction
+  await prisma.$transaction(async (tx: any) => {
+    // Apaga os anexos atrelados
+    await tx.anexo.deleteMany({ where: { chamadoId: ticket.id } });
+
+    // Apaga os checklists / ações
+    await tx.chamadoAcao.deleteMany({ where: { chamadoId: ticket.id } });
+
+    // Apaga interações/histórico se existir a tabela (ajuste se sua tabela tiver outro nome)
+    if (tx.interacaoChamado) {
+      await tx.interacaoChamado.deleteMany({ where: { chamadoId: ticket.id } });
+    } else if (tx.interacao) {
+      await tx.interacao.deleteMany({ where: { chamadoId: ticket.id } });
+    }
+
+    // Por fim, apaga o chamado principal
+    await tx.chamado.delete({ where: { id: ticket.id } });
+  });
+
+  revalidatePath("/dashboard");
+}
