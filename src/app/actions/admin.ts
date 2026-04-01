@@ -348,3 +348,83 @@ export async function deleteAcao(formData: FormData) {
 
   revalidatePath("/admin/tipos");
 }
+
+export async function createPreventivaAdmin(formData: FormData) {
+  await verifyGlobalAdmin(); // Pode ajustar conforme a sua regra de quem pode criar preventivas
+
+  const titulo = formData.get("titulo") as string;
+  const descricao = formData.get("descricao") as string;
+  const frequenciaDias = Number(formData.get("frequenciaDias"));
+  const proximaExecucaoStr = formData.get("proximaExecucao") as string;
+
+  // Converte a data do HTML (YYYY-MM-DD) para Data ISO considerando fuso
+  const proximaExecucao = new Date(`${proximaExecucaoStr}T12:00:00.000Z`);
+
+  const departamentoDestinoId = Number(formData.get("departamentoDestinoId"));
+  const tipoId = Number(formData.get("tipoId"));
+  const localId = Number(formData.get("localId"));
+  const tecnicoId = Number(formData.get("tecnicoId"));
+  const ativa = formData.get("ativa") === "true";
+
+  await prisma.preventiva.create({
+    data: {
+      titulo,
+      descricao,
+      frequenciaDias,
+      proximaExecucao,
+      departamentoDestinoId,
+      tipoId,
+      localId,
+      tecnicoId,
+      ativa,
+    },
+  });
+
+  revalidatePath("/admin/preventivas");
+}
+
+export async function updatePreventivaAdmin(formData: FormData) {
+  await verifyGlobalAdmin();
+  const id = Number(formData.get("id"));
+
+  const titulo = formData.get("titulo") as string;
+  const descricao = formData.get("descricao") as string;
+  const frequenciaDias = Number(formData.get("frequenciaDias"));
+  const proximaExecucaoStr = formData.get("proximaExecucao") as string;
+  const proximaExecucao = new Date(`${proximaExecucaoStr}T12:00:00.000Z`);
+
+  const departamentoDestinoId = Number(formData.get("departamentoDestinoId"));
+  const tipoId = Number(formData.get("tipoId"));
+  const localId = Number(formData.get("localId"));
+  const tecnicoId = Number(formData.get("tecnicoId"));
+  const ativa = formData.get("ativa") === "true";
+
+  await prisma.preventiva.update({
+    where: { id },
+    data: {
+      titulo,
+      descricao,
+      frequenciaDias,
+      proximaExecucao,
+      departamentoDestinoId,
+      tipoId,
+      localId,
+      tecnicoId,
+      ativa,
+    },
+  });
+
+  revalidatePath("/admin/preventivas");
+}
+
+export async function deletePreventivaAdmin(formData: FormData) {
+  await verifyGlobalAdmin();
+  const id = Number(formData.get("id"));
+
+  // Exclusão física (Delete), pois a preventiva não tem dependências fortes que quebram o banco
+  await prisma.preventiva.delete({
+    where: { id },
+  });
+
+  revalidatePath("/admin/preventivas");
+}

@@ -14,6 +14,7 @@ import {
   MapPin,
   LogOut,
   X,
+  CalendarClock, // <-- Ícone importado aqui
 } from "lucide-react";
 
 export default function Sidebar({
@@ -43,9 +44,15 @@ export default function Sidebar({
     ? [{ name: "Relatórios", href: "/relatorios", icon: BarChart3 }]
     : [];
 
+  // <-- Link das Preventivas adicionado para Global Admin e Depto Admin
   const adminLinks = isGlobalAdmin
     ? [
         { name: "Tipos e SLAs", href: "/admin/tipos", icon: Tags },
+        {
+          name: "Preventivas",
+          href: "/admin/preventivas",
+          icon: CalendarClock,
+        },
         { name: "Usuários", href: "/admin/usuarios", icon: Users },
         {
           name: "Departamentos",
@@ -57,6 +64,11 @@ export default function Sidebar({
     : isDeptoAdmin
       ? [
           { name: "Tipos e SLAs", href: "/admin/tipos", icon: Tags },
+          {
+            name: "Preventivas",
+            href: "/admin/preventivas",
+            icon: CalendarClock,
+          },
           { name: "Usuários", href: "/admin/usuarios", icon: Users },
           { name: "Locais", href: "/admin/locais", icon: MapPin },
         ]
@@ -100,7 +112,6 @@ export default function Sidebar({
         className={`flex flex-col w-64 h-[100dvh] border-r border-brand-navy/20 bg-brand-navy fixed left-0 top-0 z-50 shadow-xl transition-transform duration-300 md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="p-6 relative">
-
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 text-white/50 hover:text-white md:hidden bg-white/5 rounded-md"
