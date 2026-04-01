@@ -90,9 +90,13 @@ export default async function DashboardPage({
   const chamadosWhere: any = { AND: [] };
 
   // Status default (se não houver filtro de status ou busca avançada)
-  if (statusFilter) {
+  if (statusFilter === "ALL") {
+    // Não aplica nenhuma restrição de status, traz a base toda
+  } else if (statusFilter) {
+    // Filtro específico (FECHADO, SOLICITADO, etc)
     chamadosWhere.status = statusFilter;
   } else if (!hasAdvancedFilterActive && !q) {
+    // Comportamento padrão: apenas chamados em aberto
     chamadosWhere.status = {
       in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
     };
@@ -360,6 +364,9 @@ export default async function DashboardPage({
                   <DashboardFilters
                     locais={locaisList}
                     usuarios={usuariosList}
+                    isAdmin={isAdmin}
+                    isDeptoAdmin={isDeptoAdmin}
+                    currentUserId={userId}
                   />
                 </Suspense>
               </div>

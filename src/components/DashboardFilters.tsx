@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   MapPin,
   User,
@@ -27,17 +27,27 @@ type UsuarioList = {
 interface DashboardFiltersProps {
   locais: LocalList[];
   usuarios: UsuarioList[];
+  isAdmin?: boolean;
+  isDeptoAdmin?: boolean;
+  currentUserId?: number;
 }
 
 export default function DashboardFilters({
   locais,
   usuarios,
+  isAdmin,
+  isDeptoAdmin,
+  currentUserId,
 }: DashboardFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Estados inicializados
-  const [statusFilter, setStatusFilter] = useState(searchParams?.get("status") || "");
+  const paramsString = searchParams?.toString() || "";
+
+  // Estados iniciais
+  const [statusFilter, setStatusFilter] = useState(
+    searchParams?.get("status") || "",
+  );
   const [localId, setLocalId] = useState(searchParams?.get("localId") || "");
   const [criadorId, setCriadorId] = useState(
     searchParams?.get("criadorId") || "",
@@ -64,8 +74,11 @@ export default function DashboardFilters({
     searchParams?.get("dtFechamentoAte") || "",
   );
 
-  // CORREÇÃO DO BUG: Sincroniza os estados internos sempre que a URL mudar externamente
-  useEffect(() => {
+  // Padrão Oficial do React: Atualizar estado derivado durante a renderização (sem useEffect)
+  const [prevParamsString, setPrevParamsString] = useState(paramsString);
+
+  if (paramsString !== prevParamsString) {
+    setPrevParamsString(paramsString);
     setStatusFilter(searchParams?.get("status") || "");
     setLocalId(searchParams?.get("localId") || "");
     setCriadorId(searchParams?.get("criadorId") || "");
@@ -76,7 +89,7 @@ export default function DashboardFilters({
     setDtVencimentoAte(searchParams?.get("dtVencimentoAte") || "");
     setDtFechamentoDe(searchParams?.get("dtFechamentoDe") || "");
     setDtFechamentoAte(searchParams?.get("dtFechamentoAte") || "");
-  }, [searchParams]);
+  }
 
   const handleApply = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -128,6 +141,9 @@ export default function DashboardFilters({
 
   const locaisRaiz = locais.filter((l) => !l.parentId);
 
+  // Define se o usuário tem permissão para filtrar por outras pessoas
+  const canFilterUsers = isAdmin || isDeptoAdmin;
+
   return (
     <div className="flex flex-col h-full gap-6 pb-20">
       <div className="space-y-4">
@@ -143,7 +159,8 @@ export default function DashboardFilters({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
           >
-            <option value="">Todos os status</option>
+            <option value="">Abertos (Padrão)</option>
+            <option value="ALL">Todos (Incluindo Fechados)</option>
             <option value="SOLICITADO">Apenas Solicitado</option>
             <option value="EM_ATENDIMENTO">Apenas Em Atendimento</option>
             <option value="PENDENTE">Apenas Pendente</option>
@@ -175,41 +192,47 @@ export default function DashboardFilters({
           </select>
         </div>
 
-        <div>
-          <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5" /> Solicitante (Criador)
-          </label>
-          <select
-            value={criadorId}
-            onChange={(e) => setCriadorId(e.target.value)}
-            className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
-          >
-            <option value="">Qualquer solicitante</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Exibe o filtro de Criador e Técnico APENAS para Admins ou DeptoAdmins */}
+        {canFilterUsers && (
+          <>
+            <div>
+              <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" /> Solicitante (Criador)
+              </label>
+              <select
+                value={criadorId}
+                onChange={(e) => setCriadorId(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
+              >
+                <option value="">Qualquer solicitante</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
-            <UserCog className="w-3.5 h-3.5" /> Técnico Atribuído
-          </label>
-          <select
-            value={tecnicoId}
-            onChange={(e) => setTecnicoId(e.target.value)}
-            className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
-          >
-            <option value="">Qualquer técnico</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div>
+              <label className="text-xs font-semibold text-neutral-600 mb-1.5 flex items-center gap-1.5">
+                <UserCog className="w-3.5 h-3.5" /> Técnico Atribuído
+              </label>
+              <select
+                value={tecnicoId}
+                onChange={(e) => setTecnicoId(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-brand-navy/20 transition-colors"
+              >
+                <option value="">Qualquer técnico</option>
+                <option value="unassigned">Sem técnico (Não atribuídos)</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="space-y-4">
