@@ -244,6 +244,7 @@ export default function TiposClient({
                   }}
                   className="hover:bg-neutral-50 cursor-pointer transition-colors group"
                 >
+                  {/* COLUNA: SERVIÇO / PROBLEMA */}
                   <td className="py-3 px-4">
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-neutral-900 group-hover:text-brand-navy transition-colors">
@@ -256,64 +257,119 @@ export default function TiposClient({
                       )}
                     </div>
                   </td>
+
+                  {/* COLUNA: PRIORIDADE */}
                   <td className="py-3 px-4">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${tipo.prioridade === "Alta" ? "bg-red-100 text-red-700" : tipo.prioridade === "Media" ? "bg-brand-yellow/20 text-brand-navy" : "bg-brand-green/10 text-brand-green"}`}
+                      className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
+                        tipo.prioridade === "Alta"
+                          ? "bg-red-100 text-red-700"
+                          : tipo.prioridade === "Media"
+                            ? "bg-brand-yellow/20 text-brand-navy"
+                            : "bg-brand-green/10 text-brand-green"
+                      }`}
                     >
                       {tipo.prioridade}
                     </span>
                   </td>
+
+                  {/* COLUNA: SLA */}
                   <td className="py-3 px-4">
                     <span className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
                       <Clock className="w-3.5 h-3.5 text-neutral-400" />{" "}
                       {tipo.tempoSlaHoras}h
                     </span>
                   </td>
+
+                  {/* COLUNA: DEPARTAMENTOS */}
                   <td className="py-3 px-4">
                     <div className="flex flex-wrap gap-1">
-                      {Array.from(
-                        new Set(
-                          tipo.deptoTipos.map(
-                            (dt: any) => dt.departamento.nome,
+                      {(() => {
+                        const deptosUnicos = Array.from(
+                          new Set(
+                            tipo.deptoTipos.map(
+                              (dt: any) => dt.departamento.nome,
+                            ),
                           ),
-                        ),
-                      ).map((nome: any) => (
-                        <span
-                          key={nome}
-                          className="inline-flex items-center gap-1 bg-white border border-neutral-200 px-1.5 py-0.5 rounded text-[10px] font-semibold text-neutral-600"
-                        >
-                          <Building2 className="w-3 h-3 text-neutral-400" />{" "}
-                          {nome}
-                        </span>
-                      ))}
+                        );
+                        const mostrar = deptosUnicos.slice(0, 2); // Mostra no máx 2
+                        const restantes = deptosUnicos.length - 2;
+
+                        return (
+                          <>
+                            {mostrar.map((nome: any) => (
+                              <span
+                                key={nome}
+                                className="inline-flex items-center gap-1 bg-white border border-neutral-200 px-1.5 py-0.5 rounded text-[10px] font-semibold text-neutral-600"
+                              >
+                                <Building2 className="w-3 h-3 text-neutral-400" />{" "}
+                                {nome}
+                              </span>
+                            ))}
+                            {restantes > 0 && (
+                              <span
+                                title={deptosUnicos.join(", ")}
+                                className="inline-flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-1.5 py-0.5 rounded text-[10px] font-bold text-neutral-500 cursor-help"
+                              >
+                                +{restantes} outro(s)
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </td>
+
+                  {/* COLUNA: LOCAIS DE ATUAÇÃO */}
                   <td className="py-3 px-4">
                     <div className="flex flex-wrap gap-1">
-                      {tipo.deptoTipos.length === 0 ? (
-                        <span className="text-xs text-neutral-400 italic">
-                          —
-                        </span>
-                      ) : (
-                        tipo.deptoTipos.map((dt: any) => (
-                          <span
-                            key={dt.id}
-                            className="text-[10px] bg-neutral-100 border border-neutral-200 px-1.5 py-0.5 rounded text-neutral-600 truncate max-w-[180px]"
-                            title={
-                              dt.localId
-                                ? locaisMap[dt.localId]
-                                : "Todas as localidades"
-                            }
-                          >
-                            {dt.localId
-                              ? locaisMap[dt.localId]
-                              : "Geral (Todos)"}
-                            {dt.subLocalId
-                              ? ` → ${locaisMap[dt.subLocalId]}`
-                              : ""}
-                          </span>
-                        ))
-                      )}
+                      {(() => {
+                        if (tipo.deptoTipos.length === 0)
+                          return (
+                            <span className="text-xs text-neutral-400 italic">
+                              —
+                            </span>
+                          );
+
+                        // Cria uma lista única de locais mapeados
+                        const locaisUnicos = Array.from(
+                          new Set(
+                            tipo.deptoTipos.map((dt: any) => {
+                              if (!dt.localId) return "Geral (Todos)";
+                              return `${locaisMap[dt.localId]}${
+                                dt.subLocalId
+                                  ? ` → ${locaisMap[dt.subLocalId]}`
+                                  : ""
+                              }`;
+                            }),
+                          ),
+                        );
+
+                        const mostrar = locaisUnicos.slice(0, 2); // Mostra no máx 2 locais
+                        const restantes = locaisUnicos.length - 2;
+
+                        return (
+                          <>
+                            {mostrar.map((nome: any, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[10px] bg-neutral-100 border border-neutral-200 px-1.5 py-0.5 rounded text-neutral-600 truncate max-w-[180px]"
+                                title={nome}
+                              >
+                                {nome}
+                              </span>
+                            ))}
+                            {restantes > 0 && (
+                              <span
+                                title={locaisUnicos.join("\n")}
+                                className="text-[10px] bg-neutral-200 border border-neutral-300 px-2 py-0.5 rounded text-neutral-700 font-bold cursor-help"
+                              >
+                                +{restantes} local(is)
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </td>
                 </tr>
