@@ -153,8 +153,15 @@ export default async function DashboardPage({
   } else if (tecnicoId) {
     atendimentosWhere.tecnicoId = Number(tecnicoId);
   } else if (!hasAdvancedFilterActive && activeTab === "atendimentos") {
-    // Na vista padrão de "Meus Atendimentos" ignoramos os não atribuídos (tecnicoId: null)
-    atendimentosWhere.tecnicoId = { not: null };
+    // Na vista padrão de "Meus Atendimentos" ignoramos os não atribuídos,
+    // EXCETO se o chamado foi criado pelo próprio usuário logado,
+    // para garantir que ele não fique "às cegas".
+    atendimentosWhere.AND = [
+      ...(atendimentosWhere.AND || []),
+      {
+        OR: [{ tecnicoId: { not: null } }, { usuarioCriacaoId: userId }],
+      },
+    ];
   }
 
   // Date Filters
@@ -395,8 +402,15 @@ export default async function DashboardPage({
                 </Link>
               </div>
               <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                <Suspense fallback={<div className="h-32 bg-neutral-100 animate-pulse rounded-lg"></div>}>
-                  <DashboardFilters locais={locaisList} usuarios={usuariosList} />
+                <Suspense
+                  fallback={
+                    <div className="h-32 bg-neutral-100 animate-pulse rounded-lg"></div>
+                  }
+                >
+                  <DashboardFilters
+                    locais={locaisList}
+                    usuarios={usuariosList}
+                  />
                 </Suspense>
               </div>
             </div>
