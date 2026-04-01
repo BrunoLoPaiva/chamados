@@ -63,7 +63,7 @@ export default async function DashboardPage({
     }),
   ]);
 
-  // Busca o usuário logado para descobrir seus departamentos e nível de acesso
+  // Busca o utilizador logado para descobrir os seus departamentos e nível de acesso
   const usuarioLogado = await prisma.usuario.findUnique({
     where: { id: userId },
     include: { departamentos: true },
@@ -86,127 +86,94 @@ export default async function DashboardPage({
     dtFechamentoAte
   );
 
-  const showTabs = !hasAdvancedFilterActive && !q && !statusFilter;
+  // 1. QUERY BASE UNIFICADA
+  const chamadosWhere: any = { AND: [] };
 
-  const triagemWhere = {
-    status: "SOLICITADO",
-    tecnicoId: null,
-    ...(isAdmin ? {} : { departamentoDestinoId: { in: meusDeptosIds } }),
-  };
-
-  const countTriagem = showTabs
-    ? await prisma.chamado.count({ where: triagemWhere })
-    : 0;
-  const activeTab =
-    resolvedParams?.tab || (countTriagem > 0 ? "triagem" : "atendimentos");
-
-  // 2. QUERY BASE DE ATENDIMENTOS:
-  let atendimentosWhere: any = {};
-
+  // Status default (se não houver filtro de status ou busca avançada)
   if (statusFilter) {
-    atendimentosWhere.status = statusFilter;
-  } else if (showTabs) {
-    atendimentosWhere.status = {
+    chamadosWhere.status = statusFilter;
+  } else if (!hasAdvancedFilterActive && !q) {
+    chamadosWhere.status = {
       in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
     };
   }
 
-  if (q || statusFilter || hasAdvancedFilterActive || isDeptoAdmin || isAdmin) {
-    if (isAdmin) {
-      // Admin vê tudo na busca
-    } else if (isDeptoAdmin) {
-      // Admin de depto vê tudo de seus deptos
-      atendimentosWhere.departamentoDestinoId = { in: meusDeptosIds };
-    } else {
-      // Tecnico normal só vê o que é dele ou que ele mesmo criou
-      atendimentosWhere.OR = [
+  // 2. MATRIZ DE VISIBILIDADE POR PERFIL
+  if (isAdmin) {
+    // Admin vê absolutamente tudo (não adiciona restrições)
+  } else if (isDeptoAdmin) {
+    // Coordenador vê tudo o que cai nos seus departamentos OU o que é dele
+    chamadosWhere.AND.push({
+      OR: [
+        { departamentoDestinoId: { in: meusDeptosIds } },
         { tecnicoId: userId },
         { usuarioCriacaoId: userId },
-      ];
-    }
+      ],
+    });
   } else {
-    // Normal users ONLY see their created or assigned tickets on the "Atendimentos" default view
-    atendimentosWhere.OR = [
-      { tecnicoId: userId },
-      { usuarioCriacaoId: userId },
-    ];
+    // Utilizador Comum / Técnico restrito vê apenas o que ele criou ou assumiu
+    chamadosWhere.AND.push({
+      OR: [{ tecnicoId: userId }, { usuarioCriacaoId: userId }],
+    });
   }
 
+  // 3. FILTROS DE BUSCA (Texto)
   if (q) {
-    atendimentosWhere = {
-      ...atendimentosWhere,
+    chamadosWhere.AND.push({
       OR: [
-        ...(atendimentosWhere.OR || []),
         { titulo: { contains: q } },
         { codigo: { contains: q.replace("#", "") } },
       ],
-    };
+    });
   }
 
-  // Rest of Advanced Filters
-  if (localId) atendimentosWhere.localId = Number(localId);
-  if (criadorId) atendimentosWhere.usuarioCriacaoId = Number(criadorId);
+  // 4. FILTROS AVANÇADOS
+  if (localId) chamadosWhere.localId = Number(localId);
+  if (criadorId) chamadosWhere.usuarioCriacaoId = Number(criadorId);
 
-  // Lógica da Queue do lado de "Atendimentos" vs TécnicoId
+  // Filtro de Técnico
   if (tecnicoId === "me") {
-    atendimentosWhere.tecnicoId = userId;
+    chamadosWhere.tecnicoId = userId;
+  } else if (tecnicoId === "unassigned") {
+    chamadosWhere.tecnicoId = null;
   } else if (tecnicoId) {
-    atendimentosWhere.tecnicoId = Number(tecnicoId);
-  } else if (!hasAdvancedFilterActive && activeTab === "atendimentos") {
-    // Na vista padrão de "Meus Atendimentos" ignoramos os não atribuídos,
-    // EXCETO se o chamado foi criado pelo próprio usuário logado,
-    // para garantir que ele não fique "às cegas".
-    atendimentosWhere.AND = [
-      ...(atendimentosWhere.AND || []),
-      {
-        OR: [{ tecnicoId: { not: null } }, { usuarioCriacaoId: userId }],
-      },
-    ];
+    chamadosWhere.tecnicoId = Number(tecnicoId);
   }
 
-  // Date Filters
+  // Filtros de Data
   if (dtAberturaDe || dtAberturaAte) {
-    atendimentosWhere.dataCriacao = {};
+    const dataCriacao: any = {};
     if (dtAberturaDe)
-      atendimentosWhere.dataCriacao.gte = new Date(
-        `${dtAberturaDe}T00:00:00.000Z`,
-      );
+      dataCriacao.gte = new Date(`${dtAberturaDe}T00:00:00.000Z`);
     if (dtAberturaAte)
-      atendimentosWhere.dataCriacao.lte = new Date(
-        `${dtAberturaAte}T23:59:59.999Z`,
-      );
+      dataCriacao.lte = new Date(`${dtAberturaAte}T23:59:59.999Z`);
+    chamadosWhere.dataCriacao = dataCriacao;
   }
 
   if (dtVencimentoDe || dtVencimentoAte) {
-    atendimentosWhere.dataVencimento = {};
+    const dataVencimento: any = {};
     if (dtVencimentoDe)
-      atendimentosWhere.dataVencimento.gte = new Date(
-        `${dtVencimentoDe}T00:00:00.000Z`,
-      );
+      dataVencimento.gte = new Date(`${dtVencimentoDe}T00:00:00.000Z`);
     if (dtVencimentoAte)
-      atendimentosWhere.dataVencimento.lte = new Date(
-        `${dtVencimentoAte}T23:59:59.999Z`,
-      );
+      dataVencimento.lte = new Date(`${dtVencimentoAte}T23:59:59.999Z`);
+    chamadosWhere.dataVencimento = dataVencimento;
   }
 
   if (dtFechamentoDe || dtFechamentoAte) {
-    atendimentosWhere.dataAtendimento = {};
+    const dataAtendimento: any = {};
     if (dtFechamentoDe)
-      atendimentosWhere.dataAtendimento.gte = new Date(
-        `${dtFechamentoDe}T00:00:00.000Z`,
-      );
+      dataAtendimento.gte = new Date(`${dtFechamentoDe}T00:00:00.000Z`);
     if (dtFechamentoAte)
-      atendimentosWhere.dataAtendimento.lte = new Date(
-        `${dtFechamentoAte}T23:59:59.999Z`,
-      );
+      dataAtendimento.lte = new Date(`${dtFechamentoAte}T23:59:59.999Z`);
+    chamadosWhere.dataAtendimento = dataAtendimento;
   }
 
-  const page = Math.max(1, Number(resolvedParams?.p || 1));
-  const take = 25; // Aumentado para 25 por página
-  const skip = (page - 1) * take;
+  // Limpeza final para o Prisma não reclamar de array vazio
+  if (chamadosWhere.AND.length === 0) delete chamadosWhere.AND;
 
-  let chamadosListagem: any[] = [];
-  let totalListagem = 0;
+  const page = Math.max(1, Number(resolvedParams?.p || 1));
+  const take = 25; // Mantido em 25 por página
+  const skip = (page - 1) * take;
 
   // Mapeamento de ordenação para Prisma
   let orderByClause: any = {};
@@ -216,46 +183,32 @@ export default async function DashboardPage({
   else if (sort === "dataCriacao") orderByClause = { dataCriacao: dir };
   else if (sort === "dataVencimento") orderByClause = { dataVencimento: dir };
   else if (sort === "prioridade")
-    orderByClause = { tipo: { prioridade: dir } }; // Isso as vezes falha ou é alfabético, não é perfeito mas quebra o galho (Alta/Baixa/Media)
+    orderByClause = { tipo: { prioridade: dir } }; // Isso às vezes falha ou é alfabético, não é perfeito mas resolve o essencial (Alta/Baixa/Media)
   else if (sort === "local") orderByClause = { local: { nome: dir } };
   else if (sort === "solicitante")
     orderByClause = { usuarioCriacao: { nome: dir } };
 
-  if (showTabs && activeTab === "triagem") {
-    [chamadosListagem, totalListagem] = await Promise.all([
-      prisma.chamado.findMany({
-        where: triagemWhere,
-        include: {
-          usuarioCriacao: true,
-          tipo: true,
-          local: true,
-          departamentoDestino: true,
-        },
-        orderBy:
-          Object.keys(orderByClause).length > 0
-            ? orderByClause
-            : { dataCriacao: "asc" },
-        take,
-        skip,
-      }),
-      prisma.chamado.count({ where: triagemWhere }),
-    ]);
-  } else {
-    [chamadosListagem, totalListagem] = await Promise.all([
-      prisma.chamado.findMany({
-        where: atendimentosWhere,
-        include: { usuarioCriacao: true, tipo: true, local: true },
-        orderBy:
-          Object.keys(orderByClause).length > 0
-            ? orderByClause
-            : { dataCriacao: "desc" },
-        take,
-        skip,
-      }),
-      prisma.chamado.count({ where: atendimentosWhere }),
-    ]);
-  }
-  // 3. BUSCA DO CHAMADO ATIVO SE HOUVER
+  // 5. EXECUÇÃO DA QUERY UNIFICADA
+  const [chamadosListagem, totalListagem] = await Promise.all([
+    prisma.chamado.findMany({
+      where: chamadosWhere,
+      include: {
+        usuarioCriacao: true,
+        tipo: true,
+        local: true,
+        departamentoDestino: true,
+      },
+      orderBy:
+        Object.keys(orderByClause).length > 0
+          ? orderByClause
+          : { dataCriacao: "desc" },
+      take,
+      skip,
+    }),
+    prisma.chamado.count({ where: chamadosWhere }),
+  ]);
+
+  // 6. BUSCA DO CHAMADO ATIVO SE HOUVER
   let chamadoAtivoCompleto: any = null;
   if (activeTicket) {
     chamadoAtivoCompleto = await prisma.chamado.findUnique({
@@ -275,24 +228,21 @@ export default async function DashboardPage({
 
   const totalPages = Math.max(1, Math.ceil(totalListagem / take));
 
-  const buildUrl = (p: number, overwriteTab?: string) => {
+  const buildUrl = (p: number) => {
     const sp = new URLSearchParams();
     if (q) sp.set("q", q);
     if (statusFilter) sp.set("status", statusFilter);
     if (sort !== "dataCriacao") sp.set("sort", sort);
     if (dir !== "desc") sp.set("dir", dir);
-    if (overwriteTab) {
-      sp.set("tab", overwriteTab);
-    } else if (activeTab === "triagem" && showTabs) {
-      sp.set("tab", "triagem");
-    }
     sp.set("p", String(p));
     return `/dashboard?${sp.toString()}`;
   };
 
   return (
     <div
-      className={`min-h-screen bg-neutral-50 p-4 md:p-6 lg:p-6 transition-colors ${isFilterOpen ? "overflow-hidden" : ""}`}
+      className={`min-h-screen bg-neutral-50 p-4 md:p-6 lg:p-6 transition-colors ${
+        isFilterOpen ? "overflow-hidden" : ""
+      }`}
     >
       <div
         className={
@@ -301,10 +251,10 @@ export default async function DashboardPage({
       >
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 0 tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">
               Painel de Chamados
             </h1>
-            <p className="text-sm md:text-base text-neutral-500  mt-1">
+            <p className="text-sm md:text-base text-neutral-500 mt-1">
               Caixa de entrada operacional
             </p>
           </div>
@@ -318,8 +268,8 @@ export default async function DashboardPage({
               scroll={false}
               className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm transition-all border ${
                 hasAdvancedFilterActive
-                  ? "border-brand-navy bg-brand-navy/5 text-brand-navy  "
-                  : "border-neutral-200  bg-white  text-neutral-700  hover:bg-neutral-50 "
+                  ? "border-brand-navy bg-brand-navy/5 text-brand-navy"
+                  : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
               }`}
             >
               <FilterIcon className="w-4 h-4" />
@@ -341,7 +291,7 @@ export default async function DashboardPage({
 
         {/* ── BARRA DE CONTEXTO DE FILTROS ATIVOS (CHIPS) ── */}
         {(hasAdvancedFilterActive || statusFilter) && (
-          <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white  border border-neutral-200  rounded-lg shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm">
             <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider mr-2">
               Filtros Ativos:
             </span>
@@ -353,13 +303,13 @@ export default async function DashboardPage({
             )}
 
             {localId && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100  text-neutral-700  border border-neutral-200 ">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
                 Localização Filtrada
               </span>
             )}
 
             {(dtAberturaDe || dtAberturaAte) && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100  text-neutral-700  border border-neutral-200 ">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
                 Data de Abertura
               </span>
             )}
@@ -374,7 +324,7 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {/* COMPONENT DE FILTROS AGORA É OFFCANVAS BASEADO NA URL */}
+        {/* COMPONENT DE FILTROS (OFFCANVAS) */}
         {isFilterOpen && (
           <div className="fixed inset-0 z-50 flex justify-end">
             <Link
@@ -386,8 +336,8 @@ export default async function DashboardPage({
               scroll={false}
               className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
             />
-            <div className="relative w-full max-w-sm h-full bg-white border-l border-neutral-200  shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
-              <div className="flex items-center justify-between px-6 pb-4 border-b border-neutral-100 ">
+            <div className="relative w-full max-w-sm h-full bg-white border-l border-neutral-200 shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
+              <div className="flex items-center justify-between px-6 pb-4 border-b border-neutral-100">
                 <h2 className="text-lg font-bold">Filtros Avançados</h2>
                 <Link
                   href={
@@ -396,7 +346,7 @@ export default async function DashboardPage({
                     "filters=closed"
                   }
                   scroll={false}
-                  className="p-2 -mr-2 text-neutral-500 hover:text-neutral-900  rounded-lg"
+                  className="p-2 -mr-2 text-neutral-500 hover:text-neutral-900 rounded-lg"
                 >
                   <X className="w-5 h-5" />
                 </Link>
@@ -417,61 +367,33 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {showTabs && (
-          <div className="flex space-x-4 mb-6 border-b border-neutral-200 ">
-            <Link
-              href={buildUrl(1, "triagem")}
-              className={`pb-3 text-sm font-bold transition-all border-b-2 ${
-                activeTab === "triagem"
-                  ? "border-brand-yellow text-brand-navy "
-                  : "border-transparent text-neutral-500 hover:text-neutral-800 "
-              }`}
-            >
-              Solicitações
-              {countTriagem > 0 && (
-                <span
-                  className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === "triagem" ? "bg-brand-yellow text-brand-navy" : "bg-neutral-200 text-neutral-700  "}`}
-                >
-                  {countTriagem}
-                </span>
-              )}
-            </Link>
-            <Link
-              href={buildUrl(1, "atendimentos") + "&tecnicoId=me"}
-              className={`pb-3 text-sm font-bold transition-all border-b-2 ${
-                activeTab === "atendimentos"
-                  ? "border-brand-navy text-brand-navy  "
-                  : "border-transparent text-neutral-500 hover:text-neutral-800 "
-              }`}
-            >
-              Atendimentos
-            </Link>
-          </div>
-        )}
-
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-neutral-800  flex items-center gap-2">
+            <h2 className="text-lg font-bold text-neutral-800 flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              {!showTabs
-                ? `Resultados da Busca`
-                : activeTab === "triagem"
-                  ? "Aguardando Atribuição"
-                  : "Seus Chamados"}
+              {q || hasAdvancedFilterActive || statusFilter
+                ? "Resultados da Busca"
+                : "Fila de Chamados"}
             </h2>
             {totalListagem > 0 && (
-              <span className="text-xs md:text-sm text-neutral-500 ">
+              <span className="text-xs md:text-sm text-neutral-500">
                 Total: {totalListagem} chamados
               </span>
             )}
           </div>
 
           <div
-            className={`grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 ${activeTicket ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"}`}
+            className={`grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 ${
+              activeTicket ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"
+            }`}
           >
             {/* Esquerda: A tabela (ou tela cheia) */}
             <div
-              className={`min-w-0 flex flex-col ${activeTicket ? "hidden lg:block lg:col-span-4 xl:col-span-3" : ""}`}
+              className={`min-w-0 flex flex-col ${
+                activeTicket
+                  ? "hidden lg:block lg:col-span-4 xl:col-span-3"
+                  : ""
+              }`}
             >
               <TicketsTable
                 chamados={chamadosListagem}
@@ -484,11 +406,11 @@ export default async function DashboardPage({
 
               {/* Paginação */}
               {totalPages > 1 && (
-                <div className="flex justify-between md:justify-center items-center gap-2 md:gap-4 mt-8 bg-white  p-2 rounded-md border border-neutral-200 ">
+                <div className="flex justify-between md:justify-center items-center gap-2 md:gap-4 mt-8 bg-white p-2 rounded-md border border-neutral-200">
                   {page > 1 ? (
                     <Link
                       href={buildUrl(page - 1)}
-                      className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-100  transition-colors text-neutral-700 "
+                      className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors text-neutral-700"
                     >
                       Anterior
                     </Link>
@@ -498,14 +420,14 @@ export default async function DashboardPage({
                     </div>
                   )}
 
-                  <span className="text-xs md:text-sm font-medium text-neutral-500  whitespace-nowrap px-2">
+                  <span className="text-xs md:text-sm font-medium text-neutral-500 whitespace-nowrap px-2">
                     Pág {page} de {totalPages}
                   </span>
 
                   {page < totalPages ? (
                     <Link
                       href={buildUrl(page + 1)}
-                      className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-100  transition-colors text-neutral-700 "
+                      className="px-3 md:px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors text-neutral-700"
                     >
                       Próxima
                     </Link>
