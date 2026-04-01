@@ -106,7 +106,7 @@ model Chamado {
   
   usuarioCriacao        Usuario        @relation("Criador", fields: [usuarioCriacaoId], references: [id])
   tecnico               Usuario?       @relation("Tecnico", fields: [tecnicoId], references: [id])
-  colaboradores         Usuario[]      @relation("ChamadoColaboradores") // <--- MOVIDO PARA CÁ
+  colaboradores         Usuario[]      @relation("ChamadoColaboradores") 
   
   acoes                 ChamadoAcao[]
   interacoes            Interacao[]

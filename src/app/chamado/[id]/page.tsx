@@ -46,11 +46,11 @@ export default async function ChamadoDetailsPage({
       local: true,
       tipo: true,
       anexos: true,
+      colaboradores: true,
       acoes: { include: { acao: true } },
       interacoes: { include: { usuario: true }, orderBy: { data: "asc" } },
     },
   });
-
   if (!chamado) return notFound();
 
   const isMembroDepto = meusDeptosIds.includes(chamado.departamentoDestinoId);
