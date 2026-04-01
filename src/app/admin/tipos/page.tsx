@@ -69,7 +69,9 @@ export default async function TiposPage() {
     orderBy: { nome: "asc" },
   });
 
-  const locaisMap = Object.fromEntries(todosLocaisAtivos.map((l) => [l.id, l.nome]));
+  const locaisMap = Object.fromEntries(
+    todosLocaisAtivos.map((l) => [l.id, l.nome]),
+  );
 
   // Conjunto de IDs de locais ativos para validar referências de parentId
   const idsAtivos = new Set(todosLocaisAtivos.map((l) => l.id));
@@ -78,8 +80,11 @@ export default async function TiposPage() {
   const childrenPorPai = new Map<number, { id: number; nome: string }[]>();
   for (const local of todosLocaisAtivos) {
     if (local.parentId !== null && idsAtivos.has(local.parentId)) {
-      if (!childrenPorPai.has(local.parentId)) childrenPorPai.set(local.parentId, []);
-      childrenPorPai.get(local.parentId)!.push({ id: local.id, nome: local.nome });
+      if (!childrenPorPai.has(local.parentId))
+        childrenPorPai.set(local.parentId, []);
+      childrenPorPai
+        .get(local.parentId)!
+        .push({ id: local.id, nome: local.nome });
     }
   }
 

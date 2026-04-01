@@ -119,7 +119,7 @@ export default function TiposClient({
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">
-              Catálogo de Serviços
+              Tipos de Chamados
             </h1>
             <p className="text-neutral-500 mt-1">
               Gerencie os tipos de chamados, prazos (SLA) e locais de atuação.
@@ -132,7 +132,7 @@ export default function TiposClient({
             }}
             className="flex items-center gap-2 px-5 py-2.5 bg-brand-navy text-white font-bold rounded-md hover:bg-brand-navy/90 shadow-sm transition-colors shrink-0"
           >
-            <Plus className="w-4 h-4" /> Novo Serviço
+            <Plus className="w-4 h-4" /> Criar novo tipo
           </button>
         </div>
 
