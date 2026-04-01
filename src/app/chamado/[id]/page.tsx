@@ -8,6 +8,7 @@ import { atribuirChamado } from "@/app/actions/tickets";
 import FormFecharChamado from "./FormFecharChamado";
 import { ArrowLeft, User, Building2, UserCog, Paperclip } from "lucide-react";
 import TicketTimeline from "@/components/TicketTimeline";
+import ColaboradoresManager from "@/components/ColaboradoresManager";
 
 export default async function ChamadoDetailsPage({
   params,
@@ -27,6 +28,12 @@ export default async function ChamadoDetailsPage({
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
   const meusDeptosIds =
     usuarioLogado?.departamentos.map((d: any) => d.id) || [];
+
+  const usuariosList = await prisma.usuario.findMany({
+    where: { ativo: true },
+    select: { id: true, nome: true },
+    orderBy: { nome: "asc" },
+  });
 
   const chamado = await prisma.chamado.findUnique({
     where: { codigo: resolvedParams.id },
@@ -49,9 +56,14 @@ export default async function ChamadoDetailsPage({
   const isMembroDepto = meusDeptosIds.includes(chamado.departamentoDestinoId);
   const podeAtribuir = isAdmin || isMembroDepto;
 
+  const isTecnicoPrincipal = chamado.tecnicoId === userId;
+  const isColaborador = chamado.colaboradores?.some(
+    (c: any) => c.id === userId,
+  );
+
   const podeFechar =
     chamado.status === "EM_ATENDIMENTO" &&
-    (chamado.tecnicoId === userId || isAdmin);
+    (isTecnicoPrincipal || isColaborador || isAdmin);
 
   return (
     <div className="min-h-screen bg-neutral-50 50 p-4 md:p-6 lg:p-12 transition-colors">
@@ -256,6 +268,34 @@ export default async function ChamadoDetailsPage({
                         )}
                       </span>
                     </div>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-xs text-neutral-500  font-medium">
+                      Técnico Atual
+                    </span>
+                    <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800  text-right">
+                      <UserCog className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                      <span className="truncate max-w-[140px] xl:max-w-[160px]">
+                        {chamado.tecnico?.nome || (
+                          <span className="text-amber-500 font-normal italic">
+                            Aguardando...
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ADICIONE O COMPONENTE DE COLABORADORES AQUI */}
+                  <div className="pb-3 border-b border-neutral-200">
+                    <ColaboradoresManager
+                      chamadoCodigo={chamado.codigo}
+                      tecnicoPrincipalId={chamado.tecnicoId}
+                      colaboradores={chamado.colaboradores || []}
+                      todosUsuarios={usuariosList}
+                      podeAdicionar={
+                        isTecnicoPrincipal && chamado.status !== "FECHADO"
+                      }
+                    />
                   </div>
 
                   <div className="flex justify-between items-center py-3">

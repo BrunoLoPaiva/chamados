@@ -3,6 +3,8 @@
 import { useTransition, useOptimistic, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import ColaboradoresManager from "./ColaboradoresManager";
+import FormFecharChamado from "@/app/chamado/[id]/FormFecharChamado";
 import {
   X,
   User,
@@ -12,12 +14,13 @@ import {
   Hand,
   Trash2,
   Expand,
+  Users,
 } from "lucide-react";
-import FormFecharChamado from "@/app/chamado/[id]/FormFecharChamado";
 import {
   atribuirChamado,
   bulkUpdateStatus,
   excluirChamado,
+  adicionarColaborador,
 } from "@/app/actions/tickets";
 import TicketTimeline from "./TicketTimeline";
 
@@ -44,6 +47,7 @@ type ChamadoCompleto = {
   anexos: any[];
   acoes: any[];
   interacoes: any[];
+  colaboradores?: { id: number; nome: string }[];
 };
 
 interface Props {
@@ -51,6 +55,7 @@ interface Props {
   currentUserId: number;
   isAdmin: boolean;
   meusDeptosIds: number[];
+  usuarios: { id: number; nome: string }[];
 }
 
 // ──────────────────────────────────────────────
@@ -61,6 +66,7 @@ export default function TicketDetailsPanel({
   currentUserId,
   isAdmin,
   meusDeptosIds,
+  usuarios,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,9 +119,16 @@ export default function TicketDetailsPanel({
     });
   };
 
+  // Verifica se o usuário logado é o principal ou um dos colaboradores
+  const isTecnicoPrincipal = optTecnicoId === currentUserId;
+  const isColaborador = chamado.colaboradores?.some(
+    (c: any) => c.id === currentUserId,
+  );
+
+  // Agora tanto o principal quanto o colaborador podem fechar!
   const podeFechar =
     optStatus === "EM_ATENDIMENTO" &&
-    (optTecnicoId === currentUserId || isAdmin);
+    (isTecnicoPrincipal || isColaborador || isAdmin);
 
   const handleExcluirChamado = () => {
     if (
@@ -379,6 +392,15 @@ export default function TicketDetailsPanel({
                             )}
                       </span>
                     </div>
+                    <ColaboradoresManager
+                      chamadoCodigo={chamado.codigo}
+                      tecnicoPrincipalId={optTecnicoId}
+                      colaboradores={chamado.colaboradores || []}
+                      todosUsuarios={usuarios}
+                      podeAdicionar={
+                        isTecnicoPrincipal && optStatus !== "FECHADO"
+                      }
+                    />
                   </div>
 
                   <div className="flex justify-between items-center py-3">

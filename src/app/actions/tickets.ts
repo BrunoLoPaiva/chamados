@@ -406,3 +406,27 @@ export async function excluirChamado(codigo: string) {
 
   revalidatePath("/dashboard");
 }
+
+export async function adicionarColaborador(
+  codigo: string,
+  novoTecnicoId: number,
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Usuário não autenticado");
+
+  const ticket = await prisma.chamado.findUnique({ where: { codigo } });
+  if (!ticket) throw new Error("Chamado não encontrado");
+
+  // Adiciona o novo técnico à lista de colaboradores do chamado
+  await prisma.chamado.update({
+    where: { codigo },
+    data: {
+      colaboradores: {
+        connect: { id: novoTecnicoId },
+      },
+    },
+  });
+
+  revalidatePath(`/chamado/${codigo}`);
+  revalidatePath("/dashboard");
+}

@@ -115,9 +115,13 @@ export default async function DashboardPage({
       ],
     });
   } else {
-    // Utilizador Comum / Técnico restrito vê apenas o que ele criou ou assumiu
+    // Utilizador Comum / Técnico restrito vê apenas o que ele criou, assumiu OU é colaborador
     chamadosWhere.AND.push({
-      OR: [{ tecnicoId: userId }, { usuarioCriacaoId: userId }],
+      OR: [
+        { tecnicoId: userId },
+        { usuarioCriacaoId: userId },
+        { colaboradores: { some: { id: userId } } },
+      ],
     });
   }
 
@@ -201,6 +205,7 @@ export default async function DashboardPage({
         tipo: true,
         local: true,
         departamentoDestino: true,
+        colaboradores: true,
       },
       orderBy:
         Object.keys(orderByClause).length > 0
@@ -224,6 +229,7 @@ export default async function DashboardPage({
         local: true,
         tipo: true,
         anexos: true,
+        colaboradores: true,
         acoes: { include: { acao: true } },
         interacoes: { include: { usuario: true }, orderBy: { data: "asc" } },
       },
@@ -455,6 +461,7 @@ export default async function DashboardPage({
                   currentUserId={userId}
                   isAdmin={isAdmin}
                   meusDeptosIds={meusDeptosIds}
+                  usuarios={usuariosList}
                 />
               </div>
             )}

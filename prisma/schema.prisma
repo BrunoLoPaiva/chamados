@@ -18,10 +18,11 @@ model Usuario {
   // RELAÇÃO N:N - Um usuário pode estar em vários departamentos
   departamentos   Departamento[] 
   
-  chamadosCriados Chamado[]      @relation("Criador")
-  chamadosTecnico Chamado[]      @relation("Tecnico")
-  preventivas     Preventiva[]
-  interacoes      Interacao[]
+  chamadosCriados     Chamado[]      @relation("Criador")
+  chamadosTecnico     Chamado[]      @relation("Tecnico")
+  chamadosColaborando Chamado[]      @relation("ChamadoColaboradores") // <--- ADICIONADO AQUI
+  preventivas         Preventiva[]
+  interacoes          Interacao[]
 }
 
 model Local {
@@ -102,8 +103,10 @@ model Chamado {
   local                 Local          @relation(fields: [localId], references: [id])
   tipo                  TipoChamado    @relation(fields: [tipoId], references: [id])
   departamentoDestino   Departamento   @relation("DeptoDestino", fields: [departamentoDestinoId], references: [id])
+  
   usuarioCriacao        Usuario        @relation("Criador", fields: [usuarioCriacaoId], references: [id])
   tecnico               Usuario?       @relation("Tecnico", fields: [tecnicoId], references: [id])
+  colaboradores         Usuario[]      @relation("ChamadoColaboradores") // <--- MOVIDO PARA CÁ
   
   acoes                 ChamadoAcao[]
   interacoes            Interacao[]
@@ -132,6 +135,7 @@ model ChamadoAcao {
   chamadoId Int
   acaoId    Int
   realizado Boolean @default(false)
+  
   chamado   Chamado @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
   acao      Acao    @relation(fields: [acaoId], references: [id], onDelete: Cascade)
 }
