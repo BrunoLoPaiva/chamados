@@ -43,15 +43,29 @@ export default function NovoChamadoForm({
   const tiposDisponiveis = useMemo(() => {
     if (!deptoSelecionado) return [];
 
-    const effectiveLocalId = Number(subLocalId || localId) || null;
-    const parentLocalId = Number(localId) || null;
+    const selectedLocalId = Number(localId) || null; // O Pai
+    const selectedSubLocalId = Number(subLocalId) || null; // O Filho (se houver)
 
     return deptoSelecionado.deptoTipos
       .filter((dt: any) => {
         if (!dt.tipo.ativo) return false;
-        if (!dt.localId) return true; // Global
-        if (dt.subLocalId) return dt.subLocalId === effectiveLocalId; // Específico
-        return dt.localId === parentLocalId || dt.localId === effectiveLocalId; // Abrangente
+
+        // 1. O tipo foi cadastrado para QUALQUER local?
+        if (!dt.localId) return true;
+
+        // 2. O tipo foi cadastrado EXATAMENTE para este sub-local?
+        if (dt.subLocalId && selectedSubLocalId) {
+          return dt.subLocalId === selectedSubLocalId;
+        }
+
+        // 3. O tipo foi cadastrado para a Unidade inteira?
+        // (Se sim, ele vale para o pai e para qualquer filho)
+        if (dt.localId === selectedLocalId && !dt.subLocalId) {
+          return true;
+        }
+
+        // Caso contrário, não exibe
+        return false;
       })
       .map((dt: any) => dt.tipo);
   }, [deptoSelecionado, localId, subLocalId]);
