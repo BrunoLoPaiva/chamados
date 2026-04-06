@@ -22,7 +22,6 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore inner input typing
       if (
         ["INPUT", "TEXTAREA", "SELECT"].includes(
           (e.target as HTMLElement).tagName,
@@ -52,9 +51,15 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
         Concluir Atendimento
       </h3>
 
-      <form action={handleSubmit} className="space-y-6">
+      {/* ADICIONADO ENCTYPE AQUI */}
+      <form
+        action={handleSubmit}
+        encType="multipart/form-data"
+        className="space-y-6"
+      >
         <input type="hidden" name="codigo" value={chamado.codigo} />
 
+        {/* MANTÉM OS DEMAIS CAMPOS DO COMPONENTE ORIGINAL */}
         {chamado.acoes && chamado.acoes.length > 0 && (
           <div>
             <label className="block text-sm font-semibold text-neutral-900  mb-3 transition-colors">

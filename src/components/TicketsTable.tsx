@@ -16,7 +16,11 @@ import {
   AlignCenter,
   AlignLeft,
 } from "lucide-react";
-import { bulkAtribuir, bulkUpdateStatus, bulkEncerrar } from "@/app/actions/tickets";
+import {
+  bulkAtribuir,
+  bulkUpdateStatus,
+  bulkEncerrar,
+} from "@/app/actions/tickets";
 import { toast } from "sonner";
 
 type Chamado = {
@@ -189,8 +193,10 @@ export default function TicketsTable({
   const [bulkStatusVal, setBulkStatusVal] = useState("");
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [mounted, setMounted] = useState(false);
-  
-  const [modalOpen, setModalOpen] = useState<"status" | "atribuir" | "encerrar" | null>(null);
+
+  const [modalOpen, setModalOpen] = useState<
+    "status" | "atribuir" | "encerrar" | null
+  >(null);
   const [bulkAtribuirVal, setBulkAtribuirVal] = useState("");
   const [bulkSolucaoVal, setBulkSolucaoVal] = useState("");
 
@@ -360,7 +366,13 @@ export default function TicketsTable({
 
       <div className="w-full rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-300 overflow-x-auto max-w-[100vw]">
         <table className="w-full text-left border-collapse table-auto min-w-[600px] md:min-w-full">
-          <thead className={isSplitView ? "hidden" : "bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"}>
+          <thead
+            className={
+              isSplitView
+                ? "hidden"
+                : "bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+            }
+          >
             <tr className="bg-neutral-50 border-b border-neutral-200">
               <th
                 className={`w-10 px-3 py-2 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
@@ -521,7 +533,9 @@ export default function TicketsTable({
                             {c.tipo?.prioridade || "—"}
                           </span>
                           <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
-                            {!mounted ? "—" : c.status === "FECHADO" ? (
+                            {!mounted ? (
+                              "—"
+                            ) : c.status === "FECHADO" ? (
                               fmtDateShort(c.dataAtendimento)
                             ) : overdue ? (
                               <span className="text-red-600 font-bold">
@@ -634,7 +648,9 @@ export default function TicketsTable({
                   <td
                     className={`${cellCls} hidden sm:table-cell whitespace-nowrap font-mono tabular-nums`}
                   >
-                    {!mounted ? "—" : c.status === "FECHADO" ? (
+                    {!mounted ? (
+                      "—"
+                    ) : c.status === "FECHADO" ? (
                       <span className="text-brand-green flex items-center gap-1 text-xs font-medium">
                         <CheckCheck className="w-3.5 h-3.5" />
                         {fmtDateShort(c.dataAtendimento)}
@@ -715,30 +731,47 @@ export default function TicketsTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
-              <h3 className="font-bold text-neutral-900">Atribuir Chamados ({selected.size})</h3>
-              <button onClick={() => setModalOpen(null)} className="text-neutral-400 hover:text-neutral-800"><X className="w-5 h-5" /></button>
+              <h3 className="font-bold text-neutral-900">
+                Atribuir Chamados ({selected.size})
+              </h3>
+              <button
+                onClick={() => setModalOpen(null)}
+                className="text-neutral-400 hover:text-neutral-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="p-5 space-y-4">
-              <label className="block text-sm font-semibold text-neutral-700">Técnico Analista</label>
-              <select 
-                value={bulkAtribuirVal} 
-                onChange={e => setBulkAtribuirVal(e.target.value)}
+              <label className="block text-sm font-semibold text-neutral-700">
+                Técnico Analista
+              </label>
+              <select
+                value={bulkAtribuirVal}
+                onChange={(e) => setBulkAtribuirVal(e.target.value)}
                 className="w-full px-3 py-2 border border-neutral-300 rounded-md bg-white focus:ring-2 focus:ring-brand-navy/20 outline-none"
               >
                 <option value="">Selecione o técnico alvo...</option>
-                {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="px-5 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
-              <button 
-                onClick={() => setModalOpen(null)} 
+              <button
+                onClick={() => setModalOpen(null)}
                 className="px-4 py-2 text-sm font-semibold text-neutral-600 hover:text-neutral-900 rounded-md"
-              >Cancelar</button>
-              <button 
+              >
+                Cancelar
+              </button>
+              <button
                 onClick={handleBulkAtribuirSubmit}
                 disabled={!bulkAtribuirVal || isPending}
                 className="px-4 py-2 text-sm font-bold bg-brand-navy text-white disabled:opacity-50 hover:bg-brand-navy/90 rounded-md flex items-center gap-2"
-              >{isPending ? "Aplicando..." : "Confirmar"}</button>
+              >
+                {isPending ? "Aplicando..." : "Confirmar"}
+              </button>
             </div>
           </div>
         </div>
@@ -748,32 +781,45 @@ export default function TicketsTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
-              <h3 className="font-bold text-neutral-900">Alterar Status ({selected.size})</h3>
-              <button onClick={() => setModalOpen(null)} className="text-neutral-400 hover:text-neutral-800"><X className="w-5 h-5" /></button>
+              <h3 className="font-bold text-neutral-900">
+                Alterar Status ({selected.size})
+              </h3>
+              <button
+                onClick={() => setModalOpen(null)}
+                className="text-neutral-400 hover:text-neutral-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="p-5 space-y-4">
-              <label className="block text-sm font-semibold text-neutral-700">Novo Status</label>
-              <select 
-                value={bulkStatusVal} 
-                onChange={e => setBulkStatusVal(e.target.value)}
+              <label className="block text-sm font-semibold text-neutral-700">
+                Novo Status
+              </label>
+              <select
+                value={bulkStatusVal}
+                onChange={(e) => setBulkStatusVal(e.target.value)}
                 className="w-full px-3 py-2 border border-neutral-300 rounded-md bg-white focus:ring-2 focus:ring-brand-navy/20 outline-none"
               >
                 <option value="">Selecione o status...</option>
                 <option value="SOLICITADO">SOLICITADO</option>
                 <option value="EM_ATENDIMENTO">EM_ATENDIMENTO</option>
-                <option value="PENDENTE">PENDENTE</option>
+                {/* REMOVIDO PENDENTE AQUI PARA FORÇAR A JUSTIFICATIVA INDIVIDUAL */}
               </select>
             </div>
             <div className="px-5 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
-              <button 
-                onClick={() => setModalOpen(null)} 
+              <button
+                onClick={() => setModalOpen(null)}
                 className="px-4 py-2 text-sm font-semibold text-neutral-600 hover:text-neutral-900 rounded-md"
-              >Cancelar</button>
-              <button 
+              >
+                Cancelar
+              </button>
+              <button
                 onClick={handleBulkStatusSubmit}
                 disabled={!bulkStatusVal || isPending}
                 className="px-4 py-2 text-sm font-bold bg-brand-navy text-white disabled:opacity-50 hover:bg-brand-navy/90 rounded-md flex items-center gap-2"
-              >{isPending ? "Aplicando..." : "Confirmar"}</button>
+              >
+                {isPending ? "Aplicando..." : "Confirmar"}
+              </button>
             </div>
           </div>
         </div>
@@ -783,32 +829,47 @@ export default function TicketsTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
-              <h3 className="font-bold text-brand-green flex items-center gap-2"><CheckCheck className="w-5 h-5"/> Encerramento em Lote ({selected.size})</h3>
-              <button onClick={() => setModalOpen(null)} className="text-neutral-400 hover:text-neutral-800"><X className="w-5 h-5" /></button>
+              <h3 className="font-bold text-brand-green flex items-center gap-2">
+                <CheckCheck className="w-5 h-5" /> Encerramento em Lote (
+                {selected.size})
+              </h3>
+              <button
+                onClick={() => setModalOpen(null)}
+                className="text-neutral-400 hover:text-neutral-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="p-5 space-y-4">
               <div className="p-3 bg-brand-yellow/10 border border-brand-yellow/30 rounded-md text-xs text-brand-yellow font-medium">
-                Alerta: Caso algum dos chamados possua um checklist de ações obrigatório pendente, a operação inteira será bloqueada.
+                Alerta: Caso algum dos chamados possua um checklist de ações
+                obrigatório pendente, a operação inteira será bloqueada.
               </div>
-              <label className="block text-sm font-semibold text-neutral-700">Resumo da Solução Aplicada a Todos</label>
-              <textarea 
-                value={bulkSolucaoVal} 
-                onChange={e => setBulkSolucaoVal(e.target.value)}
+              <label className="block text-sm font-semibold text-neutral-700">
+                Resumo da Solução Aplicada a Todos
+              </label>
+              <textarea
+                value={bulkSolucaoVal}
+                onChange={(e) => setBulkSolucaoVal(e.target.value)}
                 rows={4}
                 placeholder="Descreva a solução comum finalizada para o lote..."
                 className="w-full px-4 py-3 border border-neutral-300 rounded-md bg-white focus:ring-2 focus:ring-brand-green/20 focus:border-brand-green outline-none resize-none text-sm"
               />
             </div>
             <div className="px-5 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
-              <button 
-                onClick={() => setModalOpen(null)} 
+              <button
+                onClick={() => setModalOpen(null)}
                 className="px-4 py-2 text-sm font-semibold text-neutral-600 hover:text-neutral-900 rounded-md"
-              >Cancelar</button>
-              <button 
+              >
+                Cancelar
+              </button>
+              <button
                 onClick={handleBulkEncerrarSubmit}
                 disabled={!bulkSolucaoVal.trim() || isPending}
                 className="px-4 py-2 text-sm font-bold bg-brand-green text-white disabled:opacity-50 hover:bg-brand-green/90 rounded-md flex items-center gap-2"
-              >{isPending ? "Encerrando..." : "Encerrar Lote"}</button>
+              >
+                {isPending ? "Encerrando..." : "Encerrar Lote"}
+              </button>
             </div>
           </div>
         </div>

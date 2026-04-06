@@ -10,6 +10,7 @@ export async function gerarCodigoChamado() {
 }
 
 export async function createTicket(formData: FormData) {
+  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user || !(session.user as any).id)
     throw new Error("Usuário não autenticado");
@@ -35,24 +36,34 @@ export async function createTicket(formData: FormData) {
 
   const anexoFile = formData.get("anexo") as File | null;
   let anexoData = null;
-  if (anexoFile && anexoFile.size > 0) {
-    const buffer = Buffer.from(await anexoFile.arrayBuffer());
-    const fs = await import("fs");
-    const path = await import("path");
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    const safeName = anexoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "");
-    const filename = `${Date.now()}-${safeName}`;
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
+  if (
+    anexoFile &&
+    typeof anexoFile === "object" &&
+    anexoFile.name &&
+    anexoFile.size > 0
+  ) {
+    try {
+      const buffer = Buffer.from(await anexoFile.arrayBuffer());
+      const fs = await import("fs");
+      const path = await import("path");
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const safeName = anexoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "");
+      const filename = `${Date.now()}-${safeName}`;
+      const filePath = path.join(uploadDir, filename);
+      fs.writeFileSync(filePath, buffer);
 
-    anexoData = {
-      nomeArquivo: anexoFile.name,
-      tipo: anexoFile.type,
-      base64: `/uploads/${filename}`,
-    };
+      anexoData = {
+        nomeArquivo: anexoFile.name,
+        tipo: anexoFile.type || "application/octet-stream",
+        base64: `/uploads/${filename}`,
+      };
+    } catch (err) {
+      console.error("Erro ao processar anexo:", err);
+      throw new Error("Ocorreu um erro ao salvar o arquivo anexo.");
+    }
   }
 
   const tipo = await prisma.tipoChamado.findUnique({ where: { id: tipoId } });
@@ -188,24 +199,37 @@ export async function fecharChamado(formData: FormData) {
 
   const anexoFile = formData.get("anexo") as File | null;
   let anexoData = null;
-  if (anexoFile && anexoFile.size > 0) {
-    const buffer = Buffer.from(await anexoFile.arrayBuffer());
-    const fs = await import("fs");
-    const path = await import("path");
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    const safeName = anexoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "");
-    const filename = `${Date.now()}-${safeName}`;
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
 
-    anexoData = {
-      nomeArquivo: anexoFile.name,
-      tipo: anexoFile.type,
-      base64: `/uploads/${filename}`,
-    };
+  // CORREÇÃO: Check restrito que ignora strings e garante tipagem do File.
+  if (
+    anexoFile &&
+    typeof anexoFile === "object" &&
+    anexoFile.name &&
+    anexoFile.size > 0
+  ) {
+    try {
+      const buffer = Buffer.from(await anexoFile.arrayBuffer());
+      const fs = await import("fs");
+      const path = await import("path");
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const safeName = anexoFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "");
+      const filename = `${Date.now()}-${safeName}`;
+      const filePath = path.join(uploadDir, filename);
+      fs.writeFileSync(filePath, buffer);
+
+      anexoData = {
+        nomeArquivo: anexoFile.name,
+        tipo: anexoFile.type || "application/octet-stream",
+        base64: `/uploads/${filename}`,
+      };
+    } catch (err) {
+      console.error("Erro no processamento do anexo no fechamento:", err);
+      throw new Error("Falha ao ler e salvar o arquivo anexo enviado.");
+    }
   }
 
   const ticket = await prisma.chamado.findUnique({ where: { codigo } });
@@ -267,7 +291,77 @@ export async function fecharChamado(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function pausarChamado(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Usuário não autenticado");
+
+  const codigo = formData.get("codigo") as string;
+  const justificativa = formData.get("justificativa") as string;
+  const dataLimiteStr = formData.get("dataLimite") as string;
+
+  if (!codigo || !justificativa || !dataLimiteStr) {
+    throw new Error("Justificativa e Data Limite são campos obrigatórios.");
+  }
+
+  const ticket = await prisma.chamado.findUnique({ where: { codigo } });
+  if (!ticket) throw new Error("Chamado não encontrado");
+
+  const userId = Number((session.user as any).id);
+  // Atualiza também o SLA (dataVencimento) com o prazo da pausa
+  const novaDataVencimento = new Date(`${dataLimiteStr}T23:59:59.999Z`);
+  const textoInteracao = `[CHAMADO PAUSADO]\nJustificativa: ${justificativa}\nNovo SLA (Retorno): ${novaDataVencimento.toLocaleDateString("pt-BR")}`;
+
+  await prisma.$transaction(async (tx: any) => {
+    await tx.chamado.update({
+      where: { codigo },
+      data: {
+        status: "PENDENTE",
+        dataVencimento: novaDataVencimento,
+        interacoes: {
+          create: {
+            texto: textoInteracao,
+            usuario: { connect: { id: userId } },
+          },
+        },
+      },
+    });
+  });
+
+  revalidatePath(`/chamado/${codigo}`);
+  revalidatePath("/dashboard");
+}
+
+export async function retomarChamado(codigo: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) throw new Error("Usuário não autenticado");
+
+  const ticket = await prisma.chamado.findUnique({ where: { codigo } });
+  if (!ticket) throw new Error("Chamado não encontrado");
+
+  const userId = Number((session.user as any).id);
+  const textoInteracao = `[ATENDIMENTO RETOMADO]\nO atendimento deste chamado foi reiniciado pelo técnico.`;
+
+  await prisma.$transaction(async (tx: any) => {
+    await tx.chamado.update({
+      where: { codigo },
+      data: {
+        status: "EM_ATENDIMENTO",
+        interacoes: {
+          create: {
+            texto: textoInteracao,
+            usuario: { connect: { id: userId } },
+          },
+        },
+      },
+    });
+  });
+
+  revalidatePath(`/chamado/${codigo}`);
+  revalidatePath("/dashboard");
+}
+
 export async function bulkAtribuir(ids: number[], tecnicoAlvoId: number) {
+  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
   if (!ids || ids.length === 0) return;
@@ -310,10 +404,16 @@ export async function bulkUpdateStatus(ids: number[], status: string) {
   if (!session?.user) throw new Error("Usuário não autenticado");
   if (!ids || ids.length === 0) return;
 
-  // CORREÇÃO DO BUG: Bloqueio de segurança que impede que a requisição POST faça um "bypass" do form de preenchimento.
   if (status === "FECHADO") {
     throw new Error(
       "Fechamento em lote não é permitido. Acesse o chamado para preencher a solução obrigatória.",
+    );
+  }
+
+  // NOVA TRAVA: Bloqueia a pausa via ação em massa
+  if (status === "PENDENTE") {
+    throw new Error(
+      "Para pausar chamados, acesse-os individualmente para fornecer a justificativa obrigatória.",
     );
   }
 
@@ -328,6 +428,7 @@ export async function bulkUpdateStatus(ids: number[], status: string) {
 }
 
 export async function bulkEncerrar(ids: number[], solucao: string) {
+  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
   if (!ids || ids.length === 0) return;
@@ -371,13 +472,13 @@ export async function bulkEncerrar(ids: number[], solucao: string) {
 }
 
 export async function excluirChamado(codigo: string) {
+  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
 
   const userId = Number((session.user as any).id);
   const user = await prisma.usuario.findUnique({ where: { id: userId } });
 
-  // Segurança extra: Apenas Admin Global pode deletar chamados
   if (user?.perfil !== "ADMIN") {
     throw new Error("Apenas Administradores Globais podem excluir chamados.");
   }
@@ -385,22 +486,14 @@ export async function excluirChamado(codigo: string) {
   const ticket = await prisma.chamado.findUnique({ where: { codigo } });
   if (!ticket) throw new Error("Chamado não encontrado");
 
-  // Deleta tudo atrelado ao chamado numa transaction
   await prisma.$transaction(async (tx: any) => {
-    // Apaga os anexos atrelados
     await tx.anexo.deleteMany({ where: { chamadoId: ticket.id } });
-
-    // Apaga os checklists / ações
     await tx.chamadoAcao.deleteMany({ where: { chamadoId: ticket.id } });
-
-    // Apaga interações/histórico se existir a tabela (ajuste se sua tabela tiver outro nome)
     if (tx.interacaoChamado) {
       await tx.interacaoChamado.deleteMany({ where: { chamadoId: ticket.id } });
     } else if (tx.interacao) {
       await tx.interacao.deleteMany({ where: { chamadoId: ticket.id } });
     }
-
-    // Por fim, apaga o chamado principal
     await tx.chamado.delete({ where: { id: ticket.id } });
   });
 
@@ -411,13 +504,13 @@ export async function adicionarColaborador(
   codigo: string,
   novoTecnicoId: number,
 ) {
+  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
 
   const ticket = await prisma.chamado.findUnique({ where: { codigo } });
   if (!ticket) throw new Error("Chamado não encontrado");
 
-  // Adiciona o novo técnico à lista de colaboradores do chamado
   await prisma.chamado.update({
     where: { codigo },
     data: {
