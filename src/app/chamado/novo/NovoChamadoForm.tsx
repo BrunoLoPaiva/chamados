@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createTicket } from "@/app/actions/tickets";
+import { resizeImageIfNeeded } from "@/lib/resizeImage"; // <-- IMPORTAÇÃO ADICIONADA
 import { toast } from "sonner";
 import {
   Loader2,
@@ -86,13 +87,30 @@ export default function NovoChamadoForm({
       return;
     }
 
+    setLoading(true); // Movemos para cá para indicar carregamento durante o redimensionamento
+
+    // ── LÓGICA DE REDIMENSIONAMENTO DE IMAGEM ──
     const anexoFile = formData.get("anexo") as File | null;
-    if (anexoFile && anexoFile.size > 5 * 1024 * 1024) {
-      toast.error("O arquivo anexado ultrapassa o limite de 5MB.");
-      return;
+    if (anexoFile && anexoFile.size > 0) {
+      try {
+        const resizedFile = await resizeImageIfNeeded(anexoFile);
+        
+        // Verifica se após a tentativa de compressão (ou se for PDF) ainda é maior que 5MB
+        if (resizedFile.size > 5 * 1024 * 1024) {
+          toast.error("O arquivo é muito grande (limite de 5MB). Se for PDF, tente um arquivo menor.");
+          setLoading(false);
+          return;
+        }
+        
+        // Substitui o arquivo original no formData pela versão comprimida
+        formData.set("anexo", resizedFile);
+      } catch (error) {
+        toast.error("Erro ao processar a imagem. Tente anexar outro arquivo.");
+        setLoading(false);
+        return;
+      }
     }
 
-    setLoading(true);
     formData.append("isPreventiva", isPreventiva.toString());
     formData.set("localId", finalLocalValue);
 

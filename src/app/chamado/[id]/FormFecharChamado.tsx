@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { fecharChamado } from "@/app/actions/tickets";
+import { resizeImageIfNeeded } from "@/lib/resizeImage"; // <-- IMPORTAÇÃO ADICIONADA
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,6 +12,28 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
+
+    // ── LÓGICA DE REDIMENSIONAMENTO DE IMAGEM ──
+    const anexoFile = formData.get("anexo") as File | null;
+    if (anexoFile && anexoFile.size > 0) {
+      try {
+        const resizedFile = await resizeImageIfNeeded(anexoFile);
+        
+        if (resizedFile.size > 5 * 1024 * 1024) {
+          toast.error("O arquivo é muito grande (limite de 5MB). Se for PDF, tente um menor.");
+          setLoading(false);
+          return;
+        }
+        
+        // Substitui o arquivo no formData
+        formData.set("anexo", resizedFile);
+      } catch (error) {
+        toast.error("Erro ao processar a imagem. Tente anexar outro arquivo.");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       await fecharChamado(formData);
     } catch (_) {
@@ -51,7 +74,6 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
         Concluir Atendimento
       </h3>
 
-      {/* ADICIONADO ENCTYPE AQUI */}
       <form
         action={handleSubmit}
         encType="multipart/form-data"
@@ -59,7 +81,6 @@ export default function FormFecharChamado({ chamado }: { chamado: any }) {
       >
         <input type="hidden" name="codigo" value={chamado.codigo} />
 
-        {/* MANTÉM OS DEMAIS CAMPOS DO COMPONENTE ORIGINAL */}
         {chamado.acoes && chamado.acoes.length > 0 && (
           <div>
             <label className="block text-sm font-semibold text-neutral-900  mb-3 transition-colors">
