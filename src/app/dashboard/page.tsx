@@ -35,6 +35,7 @@ export default async function DashboardPage({
   const dtFechamentoDe = resolvedParams?.dtFechamentoDe || "";
   const dtFechamentoAte = resolvedParams?.dtFechamentoAte || "";
 
+  // Alterado: Padrão agora é dataVencimento
   const sort =
     (resolvedParams?.sort as
       | "codigo"
@@ -44,8 +45,10 @@ export default async function DashboardPage({
       | "solicitante"
       | "status"
       | "dataCriacao"
-      | "dataVencimento") || "dataCriacao";
-  const dir = (resolvedParams?.dir as "asc" | "desc") || "desc";
+      | "dataVencimento") || "dataVencimento"; 
+      
+  // Alterado: Direção padrão agora é asc (do mais próximo/atrasado para o mais distante)
+  const dir = (resolvedParams?.dir as "asc" | "desc") || "asc"; 
   const activeTicket = resolvedParams?.activeTicket || null;
   const isFilterOpen = resolvedParams?.filters === "open";
 
@@ -70,6 +73,7 @@ export default async function DashboardPage({
   });
 
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
+  const isTecnico = usuarioLogado?.perfil === "TECNICO";
   const isDeptoAdmin = (session.user as any).isDeptoAdmin;
   const meusDeptosIds =
     usuarioLogado?.departamentos.map((d: any) => d.id) || [];
@@ -105,6 +109,15 @@ export default async function DashboardPage({
   // 2. MATRIZ DE VISIBILIDADE POR PERFIL
   if (isAdmin) {
     // Admin vê absolutamente tudo (não adiciona restrições)
+  } else if (isTecnico) {
+    // Técnico vê APENAS o que foi atribuído a ele, onde ele colabora, ou os que ele mesmo abriu
+    chamadosWhere.AND.push({
+      OR: [
+        { tecnicoId: userId },
+        { usuarioCriacaoId: userId },
+        { colaboradores: { some: { id: userId } } },
+      ],
+    });
   } else if (isDeptoAdmin) {
     // Coordenador vê tudo o que cai nos seus departamentos OU o que é dele
     chamadosWhere.AND.push({
@@ -115,13 +128,9 @@ export default async function DashboardPage({
       ],
     });
   } else {
-    // Utilizador Comum / Técnico restrito vê apenas o que ele criou, assumiu OU é colaborador
+    // Utilizador Comum vê apenas o que ele próprio criou
     chamadosWhere.AND.push({
-      OR: [
-        { tecnicoId: userId },
-        { usuarioCriacaoId: userId },
-        { colaboradores: { some: { id: userId } } },
-      ],
+      usuarioCriacaoId: userId,
     });
   }
 
@@ -210,7 +219,7 @@ export default async function DashboardPage({
       orderBy:
         Object.keys(orderByClause).length > 0
           ? orderByClause
-          : { dataCriacao: "desc" },
+          : { dataVencimento: "asc" }, // Alterado o fallback direto no Prisma
       take,
       skip,
     }),
@@ -242,8 +251,9 @@ export default async function DashboardPage({
     const sp = new URLSearchParams();
     if (q) sp.set("q", q);
     if (statusFilter) sp.set("status", statusFilter);
-    if (sort !== "dataCriacao") sp.set("sort", sort);
-    if (dir !== "desc") sp.set("dir", dir);
+    // Alterado para refletir os novos defaults
+    if (sort !== "dataVencimento") sp.set("sort", sort);
+    if (dir !== "asc") sp.set("dir", dir);
     sp.set("p", String(p));
     return `/dashboard?${sp.toString()}`;
   };
