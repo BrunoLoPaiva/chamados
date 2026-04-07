@@ -76,7 +76,6 @@ export default async function DashboardPage({
     include: { departamentos: true },
   });
 
-  // RESTAURAÇÃO DA MATRIZ DE PERFIS
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
   const isTecnico = usuarioLogado?.perfil === "TECNICO";
   const isDeptoAdmin = (session.user as any).isDeptoAdmin;
@@ -97,20 +96,22 @@ export default async function DashboardPage({
 
   const chamadosWhere: any = { AND: [] };
 
+  // CORREÇÃO: Lógica de status mais rígida para garantir que "Abertos (Padrão)" funcione sempre
   if (statusFilter === "ALL") {
+    // Não aplica nenhuma restrição de status (Traz tudo)
   } else if (statusFilter) {
+    // Filtro específico (FECHADO, PENDENTE, etc)
     chamadosWhere.status = statusFilter;
-  } else if (!hasAdvancedFilterActive && !q) {
+  } else {
+    // Padrão Absoluto: Somente chamados em aberto, mesmo se houver busca de texto ou outros filtros
     chamadosWhere.status = {
       in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
     };
   }
 
-  // 1. APLICAÇÃO RÍGIDA DE VISIBILIDADE
+  // Matriz de Visibilidade
   if (isAdmin) {
-    // Admin vê tudo (não aplica restrições extras)
   } else if (isTecnico) {
-    // Técnico VÊ APENAS o que está atrelado a ele
     chamadosWhere.AND.push({
       OR: [
         { tecnicoId: userId },
@@ -119,7 +120,6 @@ export default async function DashboardPage({
       ],
     });
   } else if (isDeptoAdmin) {
-    // Admin de Departamento vê tudo do seu depto
     chamadosWhere.AND.push({
       OR: [
         { departamentoDestinoId: { in: meusDeptosIds } },
@@ -128,7 +128,6 @@ export default async function DashboardPage({
       ],
     });
   } else {
-    // Usuário Comum vê APENAS o que ele mesmo abriu
     chamadosWhere.AND.push({
       usuarioCriacaoId: userId,
     });
@@ -268,7 +267,7 @@ export default async function DashboardPage({
               Caixa de entrada operacional
             </p>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
             <Link
               href={
                 buildUrl(page) +
@@ -276,7 +275,7 @@ export default async function DashboardPage({
                 (isFilterOpen ? "filters=closed" : "filters=open")
               }
               scroll={false}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm transition-all border ${
+              className={`flex flex-1 md:flex-none items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm transition-all border ${
                 hasAdvancedFilterActive
                   ? "border-brand-navy bg-brand-navy/5 text-brand-navy"
                   : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
@@ -289,9 +288,10 @@ export default async function DashboardPage({
               )}
             </Link>
 
+            {/* CORREÇÃO: md:bottom-auto md:right-auto para zerar o position fixed no Desktop */}
             <Link
               href="/chamado/novo"
-              className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex items-center justify-center bg-brand-navy text-white z-[60] md:relative md:w-auto md:h-auto md:rounded-md md:px-5 md:py-2.5 md:z-0 md:shadow-none hover:bg-brand-navy/90 focus:ring-4 focus:ring-brand-navy/20 transition-all font-semibold"
+              className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex items-center justify-center bg-brand-navy text-white z-[60] md:relative md:bottom-auto md:right-auto md:w-auto md:h-auto md:rounded-md md:px-5 md:py-2.5 md:z-0 md:shadow-none hover:bg-brand-navy/90 focus:ring-4 focus:ring-brand-navy/20 transition-all font-semibold"
             >
               <Plus className="w-6 h-6 md:w-4 md:h-4" />
               <span className="hidden md:inline md:ml-2">Novo Chamado</span>
