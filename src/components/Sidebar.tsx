@@ -14,7 +14,7 @@ import {
   MapPin,
   LogOut,
   X,
-  CalendarClock, // <-- Ícone importado aqui
+  CalendarClock,
 } from "lucide-react";
 
 export default function Sidebar({
@@ -31,7 +31,7 @@ export default function Sidebar({
     session?.user?.email === "ADMIN" ||
     session?.user?.name?.toLowerCase().includes("admin");
   // @ts-expect-error next-auth session user does not have isDeptoAdmin by default
-  const isDeptoAdmin = session?.user?.isDeptoAdmin === true; // 1. Gestão/Relatórios (Apenas ADMIN ou DEPTO_ADMIN)
+  const isDeptoAdmin = session?.user?.isDeptoAdmin === true;
   const showGestao = isGlobalAdmin || isDeptoAdmin;
 
   const workspaceLinks = [
@@ -39,12 +39,10 @@ export default function Sidebar({
     { name: "Novo Chamado", href: "/chamado/novo", icon: PlusCircle },
   ];
 
-  // Gestão logic ( Admin or specific Depto roles)
   const gestaoLinks = showGestao
     ? [{ name: "Relatórios", href: "/relatorios", icon: BarChart3 }]
     : [];
 
-  // <-- Link das Preventivas adicionado para Global Admin e Depto Admin
   const adminLinks = isGlobalAdmin
     ? [
         { name: "Tipos e SLAs", href: "/admin/tipos", icon: Tags },
@@ -85,6 +83,7 @@ export default function Sidebar({
         <Link
           key={link.href}
           href={link.href}
+          onClick={onClose} // <-- CORREÇÃO: Isso garante que o menu feche ao clicar no mobile
           className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
             isActive
               ? "bg-white/10 text-brand-yellow font-bold border-l-4 border-brand-yellow pl-2"
