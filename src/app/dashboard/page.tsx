@@ -4,11 +4,20 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers"; // <-- NOVO: IMPORT DOS COOKIES NO SERVIDOR
 import { Suspense } from "react";
 import { Plus, FileText, Filter as FilterIcon, X } from "lucide-react";
 import DashboardFilters from "@/components/DashboardFilters";
 import TicketsTable from "@/components/TicketsTable";
 import TicketDetailsPanel from "@/components/TicketDetailsPanel";
+
+// ── SERVER ACTION: Limpa o cookie de filtros e redireciona ──
+async function clearFiltersAction() {
+  "use server";
+  const cookieStore = await cookies();
+  cookieStore.delete("helpme_last_filters");
+  redirect("/dashboard");
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -21,9 +30,21 @@ export default async function DashboardPage({
   const userId = Number((session.user as any).id);
 
   const resolvedParams = await searchParams;
+
+  // ── NOVO: LÓGICA DE RECUPERAÇÃO DE FILTROS VIA COOKIE ──
+  // Se a URL não contiver absolutamente nenhum parâmetro de filtro ou navegação
+  if (Object.keys(resolvedParams).length === 0) {
+    const cookieStore = await cookies();
+    const lastFilters = cookieStore.get("helpme_last_filters")?.value;
+
+    // Se o cookie existir, fazemos o redirect limpo no servidor antes de carregar a tela
+    if (lastFilters) {
+      redirect(`/dashboard?${decodeURIComponent(lastFilters)}`);
+    }
+  }
+
   const q = resolvedParams?.q || "";
   const statusFilter = resolvedParams?.status || "";
-
   const localId = resolvedParams?.localId || "";
   const criadorId = resolvedParams?.criadorId || "";
   const tecnicoId = resolvedParams?.tecnicoId || "";
@@ -96,20 +117,15 @@ export default async function DashboardPage({
 
   const chamadosWhere: any = { AND: [] };
 
-  // CORREÇÃO: Lógica de status mais rígida para garantir que "Abertos (Padrão)" funcione sempre
   if (statusFilter === "ALL") {
-    // Não aplica nenhuma restrição de status (Traz tudo)
   } else if (statusFilter) {
-    // Filtro específico (FECHADO, PENDENTE, etc)
     chamadosWhere.status = statusFilter;
   } else {
-    // Padrão Absoluto: Somente chamados em aberto, mesmo se houver busca de texto ou outros filtros
     chamadosWhere.status = {
       in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
     };
   }
 
-  // Matriz de Visibilidade
   if (isAdmin) {
   } else if (isTecnico) {
     chamadosWhere.AND.push({
@@ -288,7 +304,6 @@ export default async function DashboardPage({
               )}
             </Link>
 
-            {/* CORREÇÃO: md:bottom-auto md:right-auto para zerar o position fixed no Desktop */}
             <Link
               href="/chamado/novo"
               className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex items-center justify-center bg-brand-navy text-white z-[60] md:relative md:bottom-auto md:right-auto md:w-auto md:h-auto md:rounded-md md:px-5 md:py-2.5 md:z-0 md:shadow-none hover:bg-brand-navy/90 focus:ring-4 focus:ring-brand-navy/20 transition-all font-semibold"
@@ -323,13 +338,18 @@ export default async function DashboardPage({
               </span>
             )}
 
-            <Link
-              href="/dashboard"
-              scroll={false}
-              className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline ml-auto flex items-center gap-1"
+            {/* ── NOVO: FORMULÁRIO SERVER ACTION PARA LIMPAR TODOS OS FILTROS ── */}
+            <form
+              action={clearFiltersAction}
+              className="ml-auto flex items-center"
             >
-              <X className="w-3 h-3" /> Limpar Todos
-            </Link>
+              <button
+                type="submit"
+                className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Limpar Todos
+              </button>
+            </form>
           </div>
         )}
 

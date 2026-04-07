@@ -27,7 +27,7 @@ type UsuarioList = {
 interface DashboardFiltersProps {
   locais: LocalList[];
   usuarios: UsuarioList[];
-  tecnicos: UsuarioList[]; // <-- NOVA PROP
+  tecnicos: UsuarioList[];
   isAdmin?: boolean;
   isDeptoAdmin?: boolean;
   currentUserId?: number;
@@ -36,7 +36,7 @@ interface DashboardFiltersProps {
 export default function DashboardFilters({
   locais,
   usuarios,
-  tecnicos, // <-- RECEBENDO A PROP AQUI
+  tecnicos,
   isAdmin,
   isDeptoAdmin,
   currentUserId,
@@ -46,7 +46,6 @@ export default function DashboardFilters({
 
   const paramsString = searchParams?.toString() || "";
 
-  // Estados iniciais
   const [statusFilter, setStatusFilter] = useState(
     searchParams?.get("status") || "",
   );
@@ -116,6 +115,10 @@ export default function DashboardFilters({
     if (dtFechamentoAte) params.set("dtFechamentoAte", dtFechamentoAte);
     else params.delete("dtFechamentoAte");
 
+    // ── NOVO: GRAVAR FILTROS NO COOKIE (Válido por 30 dias) ──
+    const filterParamsStr = params.toString();
+    document.cookie = `helpme_last_filters=${encodeURIComponent(filterParamsStr)}; path=/; max-age=${60 * 60 * 24 * 30}`;
+
     params.set("p", "1");
     params.set("filters", "closed");
     router.push(`/dashboard?${params.toString()}`, { scroll: false });
@@ -135,13 +138,15 @@ export default function DashboardFilters({
     params.delete("dtFechamentoDe");
     params.delete("dtFechamentoAte");
 
+    // ── NOVO: APAGAR O COOKIE ──
+    document.cookie = "helpme_last_filters=; path=/; max-age=0";
+
     params.set("p", "1");
     params.set("filters", "closed");
     router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
 
   const locaisRaiz = locais.filter((l) => !l.parentId);
-
   const canFilterUsers = isAdmin || isDeptoAdmin;
 
   return (
@@ -161,10 +166,10 @@ export default function DashboardFilters({
           >
             <option value="">Abertos (Padrão)</option>
             <option value="ALL">Todos (Incluindo Fechados)</option>
-            <option value="SOLICITADO">Sem técnico atribuído</option>
-            <option value="EM_ATENDIMENTO">Em Atendimento</option>
-            <option value="PENDENTE">Pendentes</option>
-            <option value="FECHADO">Finalizados</option>
+            <option value="SOLICITADO">Apenas Solicitado</option>
+            <option value="EM_ATENDIMENTO">Apenas Em Atendimento</option>
+            <option value="PENDENTE">Apenas Pendente</option>
+            <option value="FECHADO">Apenas Fechado</option>
           </select>
         </div>
         <div>
@@ -223,7 +228,6 @@ export default function DashboardFilters({
               >
                 <option value="">Qualquer técnico</option>
                 <option value="unassigned">Sem técnico (Não atribuídos)</option>
-                {/* AQUI USAMOS A NOVA LISTA FILTRADA DE TÉCNICOS */}
                 {tecnicos.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.nome}
