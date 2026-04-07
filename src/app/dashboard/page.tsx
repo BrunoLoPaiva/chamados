@@ -20,7 +20,6 @@ export default async function DashboardPage({
 
   const userId = Number((session.user as any).id);
 
-  // Next.js 15: searchParams must be awaited
   const resolvedParams = await searchParams;
   const q = resolvedParams?.q || "";
   const statusFilter = resolvedParams?.status || "";
@@ -44,12 +43,11 @@ export default async function DashboardPage({
       | "solicitante"
       | "status"
       | "dataCriacao"
-      | "dataVencimento") || "dataCriacao";
-  const dir = (resolvedParams?.dir as "asc" | "desc") || "desc";
+      | "dataVencimento") || "dataVencimento";
+  const dir = (resolvedParams?.dir as "asc" | "desc") || "asc";
   const activeTicket = resolvedParams?.activeTicket || null;
   const isFilterOpen = resolvedParams?.filters === "open";
 
-  // Busca paralela otimizada, incluindo também os tecnicoId dos chamados
   const [locaisList, usuariosList, chamadosTecnicos] = await Promise.all([
     prisma.local.findMany({
       where: { ativo: true },
@@ -63,22 +61,24 @@ export default async function DashboardPage({
     }),
     prisma.chamado.findMany({
       where: { tecnicoId: { not: null } },
-      distinct: ["tecnicoId"], // Filtra para retornar apenas os técnicos vinculados aos chamados
+      distinct: ["tecnicoId"],
       select: { tecnicoId: true },
-    })
+    }),
   ]);
 
-  // Gera array apenas com os técnicos reais
   const tecnicoIdsComChamados = chamadosTecnicos.map((c) => c.tecnicoId);
-  const tecnicosList = usuariosList.filter((u) => tecnicoIdsComChamados.includes(u.id));
+  const tecnicosList = usuariosList.filter((u) =>
+    tecnicoIdsComChamados.includes(u.id),
+  );
 
-  // Busca o utilizador logado para descobrir os seus departamentos e nível de acesso
   const usuarioLogado = await prisma.usuario.findUnique({
     where: { id: userId },
     include: { departamentos: true },
   });
 
+  // RESTAURAÇÃO DA MATRIZ DE PERFIS
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
+  const isTecnico = usuarioLogado?.perfil === "TECNICO";
   const isDeptoAdmin = (session.user as any).isDeptoAdmin;
   const meusDeptosIds =
     usuarioLogado?.departamentos.map((d: any) => d.id) || [];
@@ -95,27 +95,31 @@ export default async function DashboardPage({
     dtFechamentoAte
   );
 
-  // 1. QUERY BASE UNIFICADA
   const chamadosWhere: any = { AND: [] };
 
-  // Status default (se não houver filtro de status ou busca avançada)
   if (statusFilter === "ALL") {
-    // Não aplica nenhuma restrição de status, traz a base toda
   } else if (statusFilter) {
-    // Filtro específico (FECHADO, SOLICITADO, etc)
     chamadosWhere.status = statusFilter;
   } else if (!hasAdvancedFilterActive && !q) {
-    // Comportamento padrão: apenas chamados em aberto
     chamadosWhere.status = {
       in: ["SOLICITADO", "EM_ATENDIMENTO", "PENDENTE"],
     };
   }
 
-  // 2. MATRIZ DE VISIBILIDADE POR PERFIL
+  // 1. APLICAÇÃO RÍGIDA DE VISIBILIDADE
   if (isAdmin) {
-    // Admin vê absolutamente tudo (não adiciona restrições)
+    // Admin vê tudo (não aplica restrições extras)
+  } else if (isTecnico) {
+    // Técnico VÊ APENAS o que está atrelado a ele
+    chamadosWhere.AND.push({
+      OR: [
+        { tecnicoId: userId },
+        { usuarioCriacaoId: userId },
+        { colaboradores: { some: { id: userId } } },
+      ],
+    });
   } else if (isDeptoAdmin) {
-    // Coordenador vê tudo o que cai nos seus departamentos OU o que é dele
+    // Admin de Departamento vê tudo do seu depto
     chamadosWhere.AND.push({
       OR: [
         { departamentoDestinoId: { in: meusDeptosIds } },
@@ -124,17 +128,12 @@ export default async function DashboardPage({
       ],
     });
   } else {
-    // Utilizador Comum / Técnico restrito vê apenas o que ele criou, assumiu OU é colaborador
+    // Usuário Comum vê APENAS o que ele mesmo abriu
     chamadosWhere.AND.push({
-      OR: [
-        { tecnicoId: userId },
-        { usuarioCriacaoId: userId },
-        { colaboradores: { some: { id: userId } } },
-      ],
+      usuarioCriacaoId: userId,
     });
   }
 
-  // 3. FILTROS DE BUSCA (Texto)
   if (q) {
     chamadosWhere.AND.push({
       OR: [
@@ -144,11 +143,9 @@ export default async function DashboardPage({
     });
   }
 
-  // 4. FILTROS AVANÇADOS
   if (localId) chamadosWhere.localId = Number(localId);
   if (criadorId) chamadosWhere.usuarioCriacaoId = Number(criadorId);
 
-  // Filtro de Técnico
   if (tecnicoId === "me") {
     chamadosWhere.tecnicoId = userId;
   } else if (tecnicoId === "unassigned") {
@@ -157,7 +154,6 @@ export default async function DashboardPage({
     chamadosWhere.tecnicoId = Number(tecnicoId);
   }
 
-  // Filtros de Data
   if (dtAberturaDe || dtAberturaAte) {
     const dataCriacao: any = {};
     if (dtAberturaDe)
@@ -185,27 +181,23 @@ export default async function DashboardPage({
     chamadosWhere.dataAtendimento = dataAtendimento;
   }
 
-  // Limpeza final para o Prisma não reclamar de array vazio
   if (chamadosWhere.AND.length === 0) delete chamadosWhere.AND;
 
   const page = Math.max(1, Number(resolvedParams?.p || 1));
-  const take = 25; // Mantido em 25 por página
+  const take = 25;
   const skip = (page - 1) * take;
 
-  // Mapeamento de ordenação para Prisma
   let orderByClause: any = {};
   if (sort === "codigo") orderByClause = { codigo: dir };
   else if (sort === "titulo") orderByClause = { titulo: dir };
   else if (sort === "status") orderByClause = { status: dir };
   else if (sort === "dataCriacao") orderByClause = { dataCriacao: dir };
   else if (sort === "dataVencimento") orderByClause = { dataVencimento: dir };
-  else if (sort === "prioridade")
-    orderByClause = { tipo: { prioridade: dir } }; 
+  else if (sort === "prioridade") orderByClause = { tipo: { prioridade: dir } };
   else if (sort === "local") orderByClause = { local: { nome: dir } };
   else if (sort === "solicitante")
     orderByClause = { usuarioCriacao: { nome: dir } };
 
-  // 5. EXECUÇÃO DA QUERY UNIFICADA
   const [chamadosListagem, totalListagem] = await Promise.all([
     prisma.chamado.findMany({
       where: chamadosWhere,
@@ -219,14 +211,13 @@ export default async function DashboardPage({
       orderBy:
         Object.keys(orderByClause).length > 0
           ? orderByClause
-          : { dataCriacao: "desc" },
+          : { dataVencimento: "asc" },
       take,
       skip,
     }),
     prisma.chamado.count({ where: chamadosWhere }),
   ]);
 
-  // 6. BUSCA DO CHAMADO ATIVO SE HOUVER
   let chamadoAtivoCompleto: any = null;
   if (activeTicket) {
     chamadoAtivoCompleto = await prisma.chamado.findUnique({
@@ -251,8 +242,8 @@ export default async function DashboardPage({
     const sp = new URLSearchParams();
     if (q) sp.set("q", q);
     if (statusFilter) sp.set("status", statusFilter);
-    if (sort !== "dataCriacao") sp.set("sort", sort);
-    if (dir !== "desc") sp.set("dir", dir);
+    if (sort !== "dataVencimento") sp.set("sort", sort);
+    if (dir !== "asc") sp.set("dir", dir);
     sp.set("p", String(p));
     return `/dashboard?${sp.toString()}`;
   };
@@ -277,7 +268,7 @@ export default async function DashboardPage({
               Caixa de entrada operacional
             </p>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
             <Link
               href={
                 buildUrl(page) +
@@ -300,15 +291,14 @@ export default async function DashboardPage({
 
             <Link
               href="/chamado/novo"
-              className="flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-2.5 bg-brand-navy text-white rounded-md hover:bg-brand-navy/90 focus:ring-4 focus:ring-brand-navy/20 transition-all font-semibold"
+              className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex items-center justify-center bg-brand-navy text-white z-[60] md:relative md:w-auto md:h-auto md:rounded-md md:px-5 md:py-2.5 md:z-0 md:shadow-none hover:bg-brand-navy/90 focus:ring-4 focus:ring-brand-navy/20 transition-all font-semibold"
             >
-              <Plus className="w-4 h-4" />
-              Novo Chamado
+              <Plus className="w-6 h-6 md:w-4 md:h-4" />
+              <span className="hidden md:inline md:ml-2">Novo Chamado</span>
             </Link>
           </div>
         </header>
 
-        {/* ── BARRA DE CONTEXTO DE FILTROS ATIVOS (CHIPS) ── */}
         {(hasAdvancedFilterActive || statusFilter) && (
           <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white border border-neutral-200 rounded-lg shadow-sm">
             <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider mr-2">
@@ -343,9 +333,8 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {/* COMPONENT DE FILTROS (OFFCANVAS) */}
         {isFilterOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="fixed inset-0 z-[70] flex justify-center items-end md:justify-end md:items-stretch">
             <Link
               href={
                 buildUrl(page) +
@@ -353,9 +342,11 @@ export default async function DashboardPage({
                 "filters=closed"
               }
               scroll={false}
-              className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
+              className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm transition-opacity"
             />
-            <div className="relative w-full max-w-sm h-full bg-white border-l border-neutral-200 shadow-2xl flex flex-col pt-6 origin-right animate-in slide-in-from-right-full duration-300">
+            <div className="relative w-full md:max-w-sm h-[85vh] md:h-full bg-white md:border-l border-neutral-200 shadow-2xl flex flex-col pt-3 md:pt-6 rounded-t-3xl md:rounded-none origin-bottom md:origin-right animate-in slide-in-from-bottom-full md:slide-in-from-right-full duration-300">
+              <div className="w-12 h-1.5 bg-neutral-200 rounded-full mx-auto mb-4 md:hidden"></div>
+
               <div className="flex items-center justify-between px-6 pb-4 border-b border-neutral-100">
                 <h2 className="text-lg font-bold">Filtros Avançados</h2>
                 <Link
@@ -370,7 +361,7 @@ export default async function DashboardPage({
                   <X className="w-5 h-5" />
                 </Link>
               </div>
-              <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="p-6 overflow-y-auto custom-scrollbar flex-1 pb-24 md:pb-6">
                 <Suspense
                   fallback={
                     <div className="h-32 bg-neutral-100 animate-pulse rounded-lg"></div>
@@ -379,7 +370,7 @@ export default async function DashboardPage({
                   <DashboardFilters
                     locais={locaisList}
                     usuarios={usuariosList}
-                    tecnicos={tecnicosList} // <-- PASSANDO A LISTA FILTRADA
+                    tecnicos={tecnicosList}
                     isAdmin={isAdmin}
                     isDeptoAdmin={isDeptoAdmin}
                     currentUserId={userId}
@@ -410,7 +401,6 @@ export default async function DashboardPage({
               activeTicket ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1"
             }`}
           >
-            {/* Esquerda: A tabela (ou tela cheia) */}
             <div
               className={`min-w-0 flex flex-col ${
                 activeTicket
@@ -427,7 +417,6 @@ export default async function DashboardPage({
                 usuarios={usuariosList}
               />
 
-              {/* Paginação */}
               {totalPages > 1 && (
                 <div className="flex justify-between md:justify-center items-center gap-2 md:gap-4 mt-8 bg-white p-2 rounded-md border border-neutral-200">
                   {page > 1 ? (
@@ -463,7 +452,6 @@ export default async function DashboardPage({
               )}
             </div>
 
-            {/* Direita: O ticket ativo (Master-Detail) */}
             {activeTicket && chamadoAtivoCompleto && (
               <div className="lg:col-span-8 xl:col-span-9 animate-in slide-in-from-right-8 duration-500">
                 <TicketDetailsPanel

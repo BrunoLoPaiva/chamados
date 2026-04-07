@@ -263,7 +263,7 @@ export default function NovoChamadoForm({
               type="text"
               required
               className="w-full px-4 py-3 bg-neutral-50 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
-              placeholder="Ex: Ar condicionado vazando água"
+              placeholder="Ex: Computador não liga"
             />
           </div>
 
@@ -288,7 +288,8 @@ export default function NovoChamadoForm({
               name="anexo"
               type="file"
               accept="image/*,application/pdf"
-              className="block w-full text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand-navy file:text-white hover:file:bg-brand-navy/90 border-2 border-dashed border-neutral-300 rounded-xl p-6 bg-neutral-50 hover:bg-neutral-100 cursor-pointer transition-colors text-center"
+              capture="environment"
+              className="block w-full min-h-[64px] text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand-navy file:text-white hover:file:bg-brand-navy/90 border-2 border-dashed border-neutral-300 rounded-xl p-6 bg-neutral-50 hover:bg-neutral-100 cursor-pointer transition-colors text-center"
             />
           </div>
         </div>

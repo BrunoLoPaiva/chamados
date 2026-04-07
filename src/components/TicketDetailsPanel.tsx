@@ -251,113 +251,108 @@ export default function TicketDetailsPanel({
             )}
           </div>
 
-          <div className="w-full lg:w-[320px] xl:w-[360px] p-5 bg-neutral-50/50 /20 border-l border-neutral-100 flex flex-col gap-6 min-w-0">
-            <div className="sticky top-6 flex flex-col gap-6">
-              
-              {/* --- NOVO CARD DE AÇÕES RÁPIDAS --- */}
+          <div className="w-full lg:w-[320px] xl:w-[360px] flex flex-col min-w-0">
+            {/* AÇÕES RÁPIDAS (Agora são Fixed no Mobile e Sticky no PC) */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-neutral-200 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] md:relative md:p-5 md:bg-neutral-50/50 md:border-t-0 md:border-l md:border-neutral-100 md:shadow-none md:z-auto">
               {optStatus !== "FECHADO" && (
-                <div className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 bg-neutral-50/50 border-b border-neutral-100 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-brand-navy" />
-                    <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
-                      Ações Rápidas
-                    </span>
-                  </div>
-                  <div className="p-4 flex flex-col gap-3">
-                    
-                    {!optTecnicoId && podeAtribuir && (
-                      <button
-                        onClick={handleAssumirChamado}
-                        disabled={isPending}
-                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-navy text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-brand-navy/90 transition-all focus:ring-2 focus:ring-brand-navy/20 focus:outline-none disabled:opacity-50"
-                      >
-                        <Hand className="w-4 h-4" />
-                        {isPending ? "Processando..." : "Assumir Chamado"}
-                      </button>
-                    )}
+                <div className="flex flex-col gap-2 p-0 md:p-4 md:bg-white md:border md:border-neutral-200 md:rounded-md md:shadow-sm">
+                  <span className="hidden md:flex items-center gap-2 text-xs font-bold text-neutral-800 uppercase tracking-wider mb-2 pb-2 border-b border-neutral-100">
+                    <Zap className="w-4 h-4 text-brand-navy" /> Ações Rápidas
+                  </span>
 
-                    {optTecnicoId && podeAtribuir && optStatus === "EM_ATENDIMENTO" && (
-                      <button
-                        onClick={() => setIsPausarOpen(!isPausarOpen)}
-                        disabled={isPending}
-                        className={`flex items-center justify-center gap-2 w-full py-2.5 text-sm font-semibold rounded-lg transition-all focus:ring-2 focus:outline-none disabled:opacity-50 ${isPausarOpen ? "bg-neutral-100 text-neutral-900 shadow-inner" : "bg-white border border-neutral-300 text-neutral-700 shadow-sm hover:bg-neutral-50 hover:text-neutral-900 focus:ring-neutral-200"}`}
-                      >
-                        <PauseCircle className="w-4 h-4" />
-                        Pausar Atendimento
-                      </button>
-                    )}
+                  {!optTecnicoId && podeAtribuir && (
+                    <button
+                      onClick={handleAssumirChamado}
+                      disabled={isPending}
+                      className="flex items-center justify-center gap-2 w-full py-3 md:py-2 bg-brand-navy text-white text-sm font-bold rounded-lg md:rounded-md shadow-md md:shadow-sm hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+                    >
+                      <Hand className="w-5 h-5 md:w-4 md:h-4" />
+                      {isPending ? "Processando..." : "Assumir Chamado"}
+                    </button>
+                  )}
 
-                    {isPausarOpen && optStatus === "EM_ATENDIMENTO" && (
-                      <div className="mt-1 p-4 bg-neutral-50 border border-neutral-200 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-neutral-700">Justificativa da Pausa</label>
-                          <textarea
-                            value={pausarJustificativa}
-                            onChange={(e) => setPausarJustificativa(e.target.value)}
-                            placeholder="Informe o motivo..."
-                            className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none resize-none transition-all"
-                            rows={2}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-neutral-700">Retomar até (SLA)</label>
-                          <input
-                            type="date"
-                            value={pausarDataLimite}
-                            onChange={(e) => setPausarDataLimite(e.target.value)}
-                            className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200/60 mt-1">
-                          <button
-                            onClick={() => setIsPausarOpen(false)}
-                            className="px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200/50 rounded-md transition-colors"
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            onClick={handlePausarSubmit}
-                            disabled={isPending}
-                            className="px-4 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500/20 transition-all disabled:opacity-50"
-                          >
-                            Confirmar Pausa
-                          </button>
-                        </div>
+                  {optTecnicoId && podeAtribuir && optStatus === "EM_ATENDIMENTO" && (
+                    <button
+                      onClick={() => setIsPausarOpen(!isPausarOpen)}
+                      disabled={isPending}
+                      className={`flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold rounded-lg md:rounded-md transition-all focus:ring-2 focus:outline-none disabled:opacity-50 ${isPausarOpen ? "bg-neutral-100 text-neutral-900 shadow-inner" : "bg-white border border-neutral-300 text-neutral-700 shadow-md md:shadow-sm hover:bg-neutral-50 hover:text-neutral-900"}`}
+                    >
+                      <PauseCircle className="w-5 h-5 md:w-4 md:h-4" />
+                      Pausar Atendimento
+                    </button>
+                  )}
+
+                  {isPausarOpen && optStatus === "EM_ATENDIMENTO" && (
+                    <div className="mt-1 p-4 bg-neutral-50 border border-neutral-200 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-neutral-700">Justificativa da Pausa</label>
+                        <textarea
+                          value={pausarJustificativa}
+                          onChange={(e) => setPausarJustificativa(e.target.value)}
+                          placeholder="Informe o motivo..."
+                          className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none resize-none transition-all"
+                          rows={2}
+                        />
                       </div>
-                    )}
-
-                    {optTecnicoId && podeAtribuir && optStatus === "PENDENTE" && (
-                      <button
-                        onClick={handleRetomar}
-                        disabled={isPending}
-                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-navy text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-brand-navy/90 transition-all focus:ring-2 focus:ring-brand-navy/20 focus:outline-none disabled:opacity-50"
-                      >
-                        <PlayCircle className="w-4 h-4" />
-                        Retomar Atendimento
-                      </button>
-                    )}
-
-                    {isAdmin && (
-                      <div className={`${(optTecnicoId && podeAtribuir) ? 'pt-3 mt-1 border-t border-neutral-100' : ''}`}>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-neutral-700">Retomar até (SLA)</label>
+                        <input
+                          type="date"
+                          value={pausarDataLimite}
+                          onChange={(e) => setPausarDataLimite(e.target.value)}
+                          className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200/60 mt-1">
                         <button
-                          onClick={handleExcluirChamado}
-                          disabled={isPending}
-                          className="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-semibold text-red-600 bg-white border border-red-200 rounded-lg shadow-sm hover:bg-red-50 hover:border-red-300 transition-all focus:ring-2 focus:ring-red-100 focus:outline-none disabled:opacity-50"
+                          onClick={() => setIsPausarOpen(false)}
+                          className="px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200/50 rounded-md transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
-                          Excluir Definitivamente
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={handlePausarSubmit}
+                          disabled={isPending}
+                          className="px-4 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500/20 transition-all disabled:opacity-50"
+                        >
+                          Confirmar Pausa
                         </button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {optTecnicoId && podeAtribuir && optStatus === "PENDENTE" && (
+                    <button
+                      onClick={handleRetomar}
+                      disabled={isPending}
+                      className="flex items-center justify-center gap-2 w-full py-3 md:py-2 bg-brand-navy text-white text-sm font-bold rounded-lg md:rounded-md shadow-md md:shadow-sm hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
+                    >
+                      <PlayCircle className="w-5 h-5 md:w-4 md:h-4" />
+                      Retomar Atendimento
+                    </button>
+                  )}
+
+                  {isAdmin && (
+                    <div className={`${(optTecnicoId && podeAtribuir) ? 'pt-3 mt-1 border-t border-neutral-100' : ''}`}>
+                      <button
+                        onClick={handleExcluirChamado}
+                        disabled={isPending}
+                        className="flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold text-red-600 bg-white border border-red-200 rounded-lg md:rounded-md shadow-md md:shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
+                        Excluir Definitivamente
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
 
-              {/* --- METADADOS (DETALHES) --- */}
-              <div>
-                <h3 className="text-xs font-bold text-neutral-900 mb-4 uppercase tracking-wider">
-                  Detalhes
-                </h3>
+            {/* METADADOS / DETALHES (Estes continuam na rolagem normal) */}
+            <div className="p-5 bg-neutral-50/50 border-l border-neutral-100 pb-32 md:pb-5">
+              <h3 className="text-xs font-bold text-neutral-900 mb-4 uppercase tracking-wider">
+                Detalhes
+              </h3>
                 <div className="flex flex-col divide-y divide-neutral-200 border-y border-neutral-200 ">
                   <div className="flex justify-between items-center py-3">
                     <span className="text-xs text-neutral-500 font-medium">
@@ -448,7 +443,6 @@ export default function TicketDetailsPanel({
                           )
                         : "—"}
                     </span>
-                  </div>
                 </div>
               </div>
             </div>
