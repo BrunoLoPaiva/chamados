@@ -35,7 +35,6 @@ export default async function DashboardPage({
   const dtFechamentoDe = resolvedParams?.dtFechamentoDe || "";
   const dtFechamentoAte = resolvedParams?.dtFechamentoAte || "";
 
-  // Alterado: Padrão agora é dataVencimento
   const sort =
     (resolvedParams?.sort as
       | "codigo"
@@ -45,15 +44,13 @@ export default async function DashboardPage({
       | "solicitante"
       | "status"
       | "dataCriacao"
-      | "dataVencimento") || "dataVencimento"; 
-      
-  // Alterado: Direção padrão agora é asc (do mais próximo/atrasado para o mais distante)
-  const dir = (resolvedParams?.dir as "asc" | "desc") || "asc"; 
+      | "dataVencimento") || "dataCriacao";
+  const dir = (resolvedParams?.dir as "asc" | "desc") || "desc";
   const activeTicket = resolvedParams?.activeTicket || null;
   const isFilterOpen = resolvedParams?.filters === "open";
 
-  // Busca do combo list data limitando colunas para não pesar
-  const [locaisList, usuariosList] = await Promise.all([
+  // Busca paralela otimizada, incluindo também os tecnicoId dos chamados
+  const [locaisList, usuariosList, chamadosTecnicos] = await Promise.all([
     prisma.local.findMany({
       where: { ativo: true },
       select: { id: true, nome: true, parentId: true },
@@ -64,7 +61,16 @@ export default async function DashboardPage({
       select: { id: true, nome: true },
       orderBy: { nome: "asc" },
     }),
+    prisma.chamado.findMany({
+      where: { tecnicoId: { not: null } },
+      distinct: ["tecnicoId"], // Filtra para retornar apenas os técnicos vinculados aos chamados
+      select: { tecnicoId: true },
+    })
   ]);
+
+  // Gera array apenas com os técnicos reais
+  const tecnicoIdsComChamados = chamadosTecnicos.map((c) => c.tecnicoId);
+  const tecnicosList = usuariosList.filter((u) => tecnicoIdsComChamados.includes(u.id));
 
   // Busca o utilizador logado para descobrir os seus departamentos e nível de acesso
   const usuarioLogado = await prisma.usuario.findUnique({
@@ -73,7 +79,6 @@ export default async function DashboardPage({
   });
 
   const isAdmin = usuarioLogado?.perfil === "ADMIN";
-  const isTecnico = usuarioLogado?.perfil === "TECNICO";
   const isDeptoAdmin = (session.user as any).isDeptoAdmin;
   const meusDeptosIds =
     usuarioLogado?.departamentos.map((d: any) => d.id) || [];
@@ -109,15 +114,6 @@ export default async function DashboardPage({
   // 2. MATRIZ DE VISIBILIDADE POR PERFIL
   if (isAdmin) {
     // Admin vê absolutamente tudo (não adiciona restrições)
-  } else if (isTecnico) {
-    // Técnico vê APENAS o que foi atribuído a ele, onde ele colabora, ou os que ele mesmo abriu
-    chamadosWhere.AND.push({
-      OR: [
-        { tecnicoId: userId },
-        { usuarioCriacaoId: userId },
-        { colaboradores: { some: { id: userId } } },
-      ],
-    });
   } else if (isDeptoAdmin) {
     // Coordenador vê tudo o que cai nos seus departamentos OU o que é dele
     chamadosWhere.AND.push({
@@ -128,9 +124,13 @@ export default async function DashboardPage({
       ],
     });
   } else {
-    // Utilizador Comum vê apenas o que ele próprio criou
+    // Utilizador Comum / Técnico restrito vê apenas o que ele criou, assumiu OU é colaborador
     chamadosWhere.AND.push({
-      usuarioCriacaoId: userId,
+      OR: [
+        { tecnicoId: userId },
+        { usuarioCriacaoId: userId },
+        { colaboradores: { some: { id: userId } } },
+      ],
     });
   }
 
@@ -200,7 +200,7 @@ export default async function DashboardPage({
   else if (sort === "dataCriacao") orderByClause = { dataCriacao: dir };
   else if (sort === "dataVencimento") orderByClause = { dataVencimento: dir };
   else if (sort === "prioridade")
-    orderByClause = { tipo: { prioridade: dir } }; // Isso às vezes falha ou é alfabético, não é perfeito mas resolve o essencial (Alta/Baixa/Media)
+    orderByClause = { tipo: { prioridade: dir } }; 
   else if (sort === "local") orderByClause = { local: { nome: dir } };
   else if (sort === "solicitante")
     orderByClause = { usuarioCriacao: { nome: dir } };
@@ -219,7 +219,7 @@ export default async function DashboardPage({
       orderBy:
         Object.keys(orderByClause).length > 0
           ? orderByClause
-          : { dataVencimento: "asc" }, // Alterado o fallback direto no Prisma
+          : { dataCriacao: "desc" },
       take,
       skip,
     }),
@@ -251,9 +251,8 @@ export default async function DashboardPage({
     const sp = new URLSearchParams();
     if (q) sp.set("q", q);
     if (statusFilter) sp.set("status", statusFilter);
-    // Alterado para refletir os novos defaults
-    if (sort !== "dataVencimento") sp.set("sort", sort);
-    if (dir !== "asc") sp.set("dir", dir);
+    if (sort !== "dataCriacao") sp.set("sort", sort);
+    if (dir !== "desc") sp.set("dir", dir);
     sp.set("p", String(p));
     return `/dashboard?${sp.toString()}`;
   };
@@ -380,6 +379,7 @@ export default async function DashboardPage({
                   <DashboardFilters
                     locais={locaisList}
                     usuarios={usuariosList}
+                    tecnicos={tecnicosList} // <-- PASSANDO A LISTA FILTRADA
                     isAdmin={isAdmin}
                     isDeptoAdmin={isDeptoAdmin}
                     currentUserId={userId}

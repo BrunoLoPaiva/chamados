@@ -27,6 +27,7 @@ type UsuarioList = {
 interface DashboardFiltersProps {
   locais: LocalList[];
   usuarios: UsuarioList[];
+  tecnicos: UsuarioList[]; // <-- NOVA PROP
   isAdmin?: boolean;
   isDeptoAdmin?: boolean;
   currentUserId?: number;
@@ -35,6 +36,7 @@ interface DashboardFiltersProps {
 export default function DashboardFilters({
   locais,
   usuarios,
+  tecnicos, // <-- RECEBENDO A PROP AQUI
   isAdmin,
   isDeptoAdmin,
   currentUserId,
@@ -74,7 +76,6 @@ export default function DashboardFilters({
     searchParams?.get("dtFechamentoAte") || "",
   );
 
-  // Padrão Oficial do React: Atualizar estado derivado durante a renderização (sem useEffect)
   const [prevParamsString, setPrevParamsString] = useState(paramsString);
 
   if (paramsString !== prevParamsString) {
@@ -141,7 +142,6 @@ export default function DashboardFilters({
 
   const locaisRaiz = locais.filter((l) => !l.parentId);
 
-  // Define se o usuário tem permissão para filtrar por outras pessoas
   const canFilterUsers = isAdmin || isDeptoAdmin;
 
   return (
@@ -192,7 +192,6 @@ export default function DashboardFilters({
           </select>
         </div>
 
-        {/* Exibe o filtro de Criador e Técnico APENAS para Admins ou DeptoAdmins */}
         {canFilterUsers && (
           <>
             <div>
@@ -224,7 +223,8 @@ export default function DashboardFilters({
               >
                 <option value="">Qualquer técnico</option>
                 <option value="unassigned">Sem técnico (Não atribuídos)</option>
-                {usuarios.map((u) => (
+                {/* AQUI USAMOS A NOVA LISTA FILTRADA DE TÉCNICOS */}
+                {tecnicos.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.nome}
                   </option>
