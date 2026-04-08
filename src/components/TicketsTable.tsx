@@ -12,10 +12,9 @@ import {
   UserCheck,
   AlertCircle,
   X,
-  AlignJustify,
-  AlignCenter,
-  AlignLeft,
-  Calendar
+  LayoutList, // <-- NOVO ÍCONE
+  LayoutGrid, // <-- NOVO ÍCONE
+  Calendar,
 } from "lucide-react";
 import {
   bulkAtribuir,
@@ -24,70 +23,170 @@ import {
 } from "@/app/actions/tickets";
 import { toast } from "sonner";
 
-// [MANTÉM AS TIPAGENS E FUNCOES DE FORMATAÇÃO ORIGINAIS]
-type Chamado = { id: number; codigo: string; titulo: string; status: string; dataCriacao: Date | string; dataVencimento?: Date | string | null; dataAtendimento?: Date | string | null; usuarioCriacao?: { nome: string } | null; tecnico?: { nome: string } | null; tipo?: { prioridade: string } | null; local?: { nome: string } | null; };
-type SortField = "codigo" | "titulo" | "prioridade" | "local" | "solicitante" | "status" | "dataCriacao" | "dataVencimento";
-type Density = "compact" | "default" | "comfortable";
+type Chamado = {
+  id: number;
+  codigo: string;
+  titulo: string;
+  status: string;
+  dataCriacao: Date | string;
+  dataVencimento?: Date | string | null;
+  dataAtendimento?: Date | string | null;
+  usuarioCriacao?: { nome: string } | null;
+  tecnico?: { nome: string } | null;
+  tipo?: { prioridade: string } | null;
+  local?: { nome: string } | null;
+};
+type SortField =
+  | "codigo"
+  | "titulo"
+  | "prioridade"
+  | "local"
+  | "solicitante"
+  | "status"
+  | "dataCriacao"
+  | "dataVencimento";
 
 interface Props {
-  chamados: Chamado[]; sort: SortField; dir: "asc" | "desc"; isSplitView?: boolean; activeTicketCodigo?: string | null; usuarios?: { id: number; nome: string }[];
+  chamados: Chamado[];
+  sort: SortField;
+  dir: "asc" | "desc";
+  isSplitView?: boolean;
+  activeTicketCodigo?: string | null;
+  usuarios?: { id: number; nome: string }[];
 }
 
-const STATUS_LABEL: Record<string, string> = { SOLICITADO: "Solicitado", EM_ATENDIMENTO: "Em Atendimento", PENDENTE: "Pendente", FECHADO: "Fechado" };
-const STATUS_UI: Record<string, { text: string; dot: string; bg: string; border: string }> = {
-  SOLICITADO: { text: "text-neutral-600 ", dot: "bg-brand-yellow", bg: "bg-white ", border: "border-neutral-200 " },
-  EM_ATENDIMENTO: { text: "text-brand-navy  font-bold", dot: "bg-brand-navy ", bg: "bg-brand-navy/5 ", border: "border-brand-navy/20 " },
-  PENDENTE: { text: "text-brand-yellow  font-medium", dot: "bg-brand-yellow", bg: "bg-brand-yellow/5", border: "border-brand-yellow/20" },
-  FECHADO: { text: "text-brand-green ", dot: "bg-brand-green", bg: "bg-brand-green/5", border: "border-brand-green/20" },
+const STATUS_LABEL: Record<string, string> = {
+  SOLICITADO: "Solicitado",
+  EM_ATENDIMENTO: "Em Atendimento",
+  PENDENTE: "Pendente",
+  FECHADO: "Fechado",
 };
-const PRIORITY_CLASS: Record<string, string> = { Alta: "text-red-600  font-bold", Media: "text-brand-yellow  font-semibold", Baixa: "text-neutral-500 " };
-const DENSITY_ROW: Record<Density, string> = { compact: "py-1.5", default: "py-2", comfortable: "py-3" };
-const DENSITY_ICONS = { compact: <AlignJustify className="w-3.5 h-3.5" />, default: <AlignCenter className="w-3.5 h-3.5" />, comfortable: <AlignLeft className="w-3.5 h-3.5" /> };
-const DENSITY_LABEL: Record<Density, string> = { compact: "Compacto", default: "Padrão", comfortable: "Confortável" };
+const STATUS_UI: Record<
+  string,
+  { text: string; dot: string; bg: string; border: string }
+> = {
+  SOLICITADO: {
+    text: "text-neutral-600 ",
+    dot: "bg-brand-yellow",
+    bg: "bg-white ",
+    border: "border-neutral-200 ",
+  },
+  EM_ATENDIMENTO: {
+    text: "text-brand-navy  font-bold",
+    dot: "bg-brand-navy ",
+    bg: "bg-brand-navy/5 ",
+    border: "border-brand-navy/20 ",
+  },
+  PENDENTE: {
+    text: "text-brand-yellow  font-medium",
+    dot: "bg-brand-yellow",
+    bg: "bg-brand-yellow/5",
+    border: "border-brand-yellow/20",
+  },
+  FECHADO: {
+    text: "text-brand-green ",
+    dot: "bg-brand-green",
+    bg: "bg-brand-green/5",
+    border: "border-brand-green/20",
+  },
+};
+const PRIORITY_CLASS: Record<string, string> = {
+  Alta: "text-red-600  font-bold",
+  Media: "text-brand-yellow  font-semibold",
+  Baixa: "text-neutral-500 ",
+};
 
 function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 function fmtDateShort(d: Date | string | null | undefined): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  return new Date(d).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
 }
 function isSlaOverdue(d: Date | string | null | undefined): boolean {
   if (!d) return false;
   return new Date(d) < new Date();
 }
 
-function SortableHeader({ field, label, currentSort, currentDir, onSort }: { field: SortField; label: string; currentSort: SortField; currentDir: "asc" | "desc"; onSort: (f: SortField) => void; }) {
+function SortableHeader({
+  field,
+  label,
+  currentSort,
+  currentDir,
+  onSort,
+}: {
+  field: SortField;
+  label: string;
+  currentSort: SortField;
+  currentDir: "asc" | "desc";
+  onSort: (f: SortField) => void;
+}) {
   const active = currentSort === field;
   return (
-    <button className={`flex items-center gap-1 group ${active ? "text-brand-navy " : "text-neutral-500  hover:text-neutral-800 "} transition-colors`} onClick={() => onSort(field)}>
-      <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">{label}</span>
-      {active ? (currentDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />}
+    <button
+      className={`flex items-center gap-1 group ${active ? "text-brand-navy " : "text-neutral-500  hover:text-neutral-800 "} transition-colors`}
+      onClick={() => onSort(field)}
+    >
+      <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+        {label}
+      </span>
+      {active ? (
+        currentDir === "asc" ? (
+          <ArrowUp className="w-3 h-3" />
+        ) : (
+          <ArrowDown className="w-3 h-3" />
+        )
+      ) : (
+        <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+      )}
     </button>
   );
 }
 
-export default function TicketsTable({ chamados, sort, dir, isSplitView, activeTicketCodigo, usuarios = [] }: Props) {
+export default function TicketsTable({
+  chamados,
+  sort,
+  dir,
+  isSplitView,
+  activeTicketCodigo,
+  usuarios = [],
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [density, setDensity] = useState<Density>("default");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table"); // <-- NOVO ESTADO
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkStatusVal, setBulkStatusVal] = useState("");
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [mounted, setMounted] = useState(false);
 
-  const [modalOpen, setModalOpen] = useState<"status" | "atribuir" | "encerrar" | null>(null);
+  const [modalOpen, setModalOpen] = useState<
+    "status" | "atribuir" | "encerrar" | null
+  >(null);
   const [bulkAtribuirVal, setBulkAtribuirVal] = useState("");
   const [bulkSolucaoVal, setBulkSolucaoVal] = useState("");
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    // [MANTÉM O HOTKEY EFFECT EXATAMENTE COMO ESTAVA]
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)) return;
+      if (
+        ["INPUT", "TEXTAREA", "SELECT"].includes(
+          (e.target as HTMLElement).tagName,
+        )
+      )
+        return;
       if (e.key.toLowerCase() === "j") {
         e.preventDefault();
         setFocusedIndex((prev) => Math.min(prev + 1, chamados.length - 1));
@@ -117,17 +216,21 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [focusedIndex, chamados, router, searchParams]);
 
-  const handleSort = useCallback((field: SortField) => {
-    const params = new URLSearchParams(searchParams.toString());
-    const newDir = sort === field && dir === "asc" ? "desc" : "asc";
-    params.set("sort", field);
-    params.set("dir", newDir);
-    params.set("p", "1");
-    router.push(`/dashboard?${params.toString()}`);
-  }, [router, searchParams, sort, dir]);
+  const handleSort = useCallback(
+    (field: SortField) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const newDir = sort === field && dir === "asc" ? "desc" : "asc";
+      params.set("sort", field);
+      params.set("dir", newDir);
+      params.set("p", "1");
+      router.push(`/dashboard?${params.toString()}`);
+    },
+    [router, searchParams, sort, dir],
+  );
 
   const allIds = chamados.map((c) => c.id);
-  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
 
   const toggleAll = () => {
@@ -149,7 +252,11 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
   };
 
   const handleRowClick = (e: React.MouseEvent, codigo: string) => {
-    if ((e.target as HTMLElement).closest('input[type="checkbox"]') || (e.target as HTMLElement).closest("a") || (e.target as HTMLElement).closest("button")) {
+    if (
+      (e.target as HTMLElement).closest('input[type="checkbox"]') ||
+      (e.target as HTMLElement).closest("a") ||
+      (e.target as HTMLElement).closest("button")
+    ) {
       return;
     }
     const params = new URLSearchParams(searchParams.toString());
@@ -159,46 +266,109 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
 
   const clearSelection = () => setSelected(new Set());
 
-  // [MANTÉM AS FUNÇÕES DE BULK SUBMIT COMO ESTAVAM]
-  const handleBulkAtribuirSubmit = () => { if (!bulkAtribuirVal) return; startTransition(async () => { try { await bulkAtribuir(Array.from(selected), Number(bulkAtribuirVal)); toast.success("Chamados atribuídos!"); setModalOpen(null); clearSelection(); } catch (err: any) { toast.error(err.message || "Erro."); } }); };
-  const handleBulkStatusSubmit = () => { if (!bulkStatusVal) return; startTransition(async () => { try { await bulkUpdateStatus(Array.from(selected), bulkStatusVal); toast.success("Status atualizado!"); setModalOpen(null); clearSelection(); } catch (err: any) { toast.error(err.message || "Erro."); } }); };
-  const handleBulkEncerrarSubmit = () => { if (!bulkSolucaoVal.trim()) { toast.error("Resumo obrigatório."); return; } startTransition(async () => { try { await bulkEncerrar(Array.from(selected), bulkSolucaoVal.trim()); toast.success("Encerrados!"); setModalOpen(null); setBulkSolucaoVal(""); clearSelection(); } catch (err: any) { toast.error(err.message || "Erro."); } }); };
+  const handleBulkAtribuirSubmit = () => {
+    if (!bulkAtribuirVal) return;
+    startTransition(async () => {
+      try {
+        await bulkAtribuir(Array.from(selected), Number(bulkAtribuirVal));
+        toast.success("Chamados atribuídos!");
+        setModalOpen(null);
+        clearSelection();
+      } catch (err: any) {
+        toast.error(err.message || "Erro.");
+      }
+    });
+  };
+  const handleBulkStatusSubmit = () => {
+    if (!bulkStatusVal) return;
+    startTransition(async () => {
+      try {
+        await bulkUpdateStatus(Array.from(selected), bulkStatusVal);
+        toast.success("Status atualizado!");
+        setModalOpen(null);
+        clearSelection();
+      } catch (err: any) {
+        toast.error(err.message || "Erro.");
+      }
+    });
+  };
+  const handleBulkEncerrarSubmit = () => {
+    if (!bulkSolucaoVal.trim()) {
+      toast.error("Resumo obrigatório.");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await bulkEncerrar(Array.from(selected), bulkSolucaoVal.trim());
+        toast.success("Encerrados!");
+        setModalOpen(null);
+        setBulkSolucaoVal("");
+        clearSelection();
+      } catch (err: any) {
+        toast.error(err.message || "Erro.");
+      }
+    });
+  };
 
-  const rowPy = DENSITY_ROW[density];
-  const cellCls = `px-3 text-sm text-neutral-700  ${rowPy}`;
+  const cellCls = "px-3 text-sm text-neutral-700 py-2";
+
+  // Lógica para alternar as classes CSS baseadas no modo de visualização
+  const isGrid = viewMode === "grid";
+  const cardsContainerClass = isGrid
+    ? `grid gap-4 grid-cols-1 sm:grid-cols-2 ${isSplitView ? "lg:grid-cols-1 xl:grid-cols-2" : "lg:grid-cols-3 xl:grid-cols-4"}`
+    : `flex flex-col gap-3 md:hidden ${isSplitView ? "hidden" : ""}`;
 
   return (
     <div className="relative">
-      <div className="hidden md:flex items-center justify-end gap-1 mb-3">
-        <span className="text-xs text-neutral-400 mr-2 font-medium">Densidade:</span>
-        {(["compact", "default", "comfortable"] as Density[]).map((d) => (
-          <button key={d} title={DENSITY_LABEL[d]} onClick={() => setDensity(d)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${density === d ? "bg-brand-navy/10 border-brand-navy/50 text-brand-navy" : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50"}`}>
-            {DENSITY_ICONS[d]}{DENSITY_LABEL[d]}
+      <div className="hidden md:flex items-center justify-end gap-2 mb-4">
+        <span className="text-xs text-neutral-400 font-medium">
+          Visualização:
+        </span>
+        <div className="flex bg-neutral-100 p-1 rounded-lg">
+          <button
+            onClick={() => setViewMode("table")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              !isGrid
+                ? "bg-white text-brand-navy shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
+            }`}
+          >
+            <LayoutList className="w-4 h-4" /> Lista
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              isGrid
+                ? "bg-white text-brand-navy shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4" /> Cards
+          </button>
+        </div>
       </div>
 
-      {/* VIEW MOBILE: CARDS */}
-      <div className={`flex flex-col gap-3 md:hidden animate-in fade-in duration-300 ${isSplitView ? "hidden" : ""}`}>
+      {/* VIEW CARDS (Mobile sempre usa, Desktop usa se Grid estiver ativo) */}
+      <div className={`animate-in fade-in duration-300 ${cardsContainerClass}`}>
         {chamados.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-xl border border-neutral-200 text-neutral-500 text-sm">
+          <div className="text-center py-12 bg-white rounded-xl border border-neutral-200 text-neutral-500 text-sm col-span-full">
             Nenhum chamado listado.
           </div>
         )}
-        
+
         {chamados.map((c) => {
           const isSelected = selected.has(c.id);
-          const overdue = c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
-          
+          const overdue =
+            c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
+
           return (
-            <div 
+            <div
               key={c.id}
               onClick={(e) => handleRowClick(e, c.codigo)}
-              className={`relative flex flex-col p-4 bg-white rounded-xl border shadow-sm transition-all active:scale-[0.98] ${isSelected ? "border-brand-navy ring-1 ring-brand-navy/20" : "border-neutral-200"} ${c.status === "FECHADO" ? "opacity-70" : ""}`}
+              className={`relative flex flex-col p-4 bg-white rounded-xl border shadow-sm transition-all active:scale-[0.98] cursor-pointer hover:border-brand-navy/30 ${isSelected ? "border-brand-navy ring-1 ring-brand-navy/20" : "border-neutral-200"} ${c.status === "FECHADO" ? "opacity-70" : ""}`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  {/* Área de toque do checkbox ampliada pro dedo gordo */}
                   <div className="p-1 -ml-1">
                     <input
                       type="checkbox"
@@ -207,30 +377,48 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                       className="w-5 h-5 rounded border-neutral-300 accent-brand-navy cursor-pointer"
                     />
                   </div>
-                  <span className="font-mono tabular-nums text-xs font-bold text-neutral-500">#{c.codigo}</span>
+                  <span className="font-mono tabular-nums text-xs font-bold text-neutral-500">
+                    #{c.codigo}
+                  </span>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}></span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}
+                  ></span>
                   {STATUS_LABEL[c.status] || c.status}
                 </span>
               </div>
-              
-              <h4 className="text-[15px] font-bold text-neutral-900 mb-2 leading-snug">{c.titulo}</h4>
-              
+
+              <h4 className="text-[15px] font-bold text-neutral-900 mb-2 leading-snug">
+                {c.titulo}
+              </h4>
+
               <div className="flex flex-wrap items-center justify-between gap-2 mt-auto pt-3 border-t border-neutral-100">
-                <span className={`text-[11px] uppercase font-bold tracking-wider ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}>
+                <span
+                  className={`text-[11px] uppercase font-bold tracking-wider ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
+                >
                   {c.tipo?.prioridade || "Sem Prioridade"}
                 </span>
-                
+
                 <div className="flex items-center gap-1.5 text-xs font-mono tabular-nums">
-                   <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-                   {!mounted ? "—" : c.status === "FECHADO" ? (
-                      <span className="text-brand-green font-medium">{fmtDateShort(c.dataAtendimento)}</span>
-                    ) : overdue ? (
-                      <span className="text-red-600 font-bold">{fmtDateShort(c.dataVencimento)}</span>
-                    ) : (
-                      <span className="text-neutral-500">{fmtDateShort(c.dataVencimento)}</span>
-                    )}
+                  <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                  {!mounted ? (
+                    "—"
+                  ) : c.status === "FECHADO" ? (
+                    <span className="text-brand-green font-medium">
+                      {fmtDateShort(c.dataAtendimento)}
+                    </span>
+                  ) : overdue ? (
+                    <span className="text-red-600 font-bold">
+                      {fmtDateShort(c.dataVencimento)}
+                    </span>
+                  ) : (
+                    <span className="text-neutral-500">
+                      {fmtDateShort(c.dataVencimento)}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -238,21 +426,112 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
         })}
       </div>
 
-      {/* VIEW DESKTOP: TABELA (Oculta no mobile com hidden md:block) */}
-      <div className={`hidden md:block w-full rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in duration-300 overflow-x-auto ${isSplitView ? "" : "max-w-[100vw]"}`}>
+      {/* VIEW DESKTOP: TABELA */}
+      <div
+        className={`w-full rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in duration-300 overflow-x-auto ${isSplitView ? "" : "max-w-[100vw]"} ${!isGrid ? "hidden md:block" : "hidden"}`}
+      >
         <table className="w-full text-left border-collapse table-auto min-w-[600px] md:min-w-full">
-          {/* MANTÉM THEAD E TBODY EXATAMENTE IGUAIS, SÓ FECHEI PARA POUPAR ESPAÇO AQUI */}
-          <thead className={isSplitView ? "hidden" : "bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"}>
+          <thead
+            className={
+              isSplitView
+                ? "hidden"
+                : "bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+            }
+          >
             <tr className="bg-neutral-50 border-b border-neutral-200">
-              <th className={`w-10 px-3 py-2 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}><input type="checkbox" checked={allSelected} ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }} onChange={toggleAll} className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer" /></th>
-              <th className="px-3 py-2 whitespace-nowrap"><SortableHeader field="codigo" label="Código" currentSort={sort} currentDir={dir} onSort={handleSort} /></th>
-              <th className="w-full px-3 py-2"><SortableHeader field="titulo" label="Título" currentSort={sort} currentDir={dir} onSort={handleSort} /></th>
-              {!isSplitView && <th className="w-[80px] px-3 py-2 hidden sm:table-cell"><SortableHeader field="prioridade" label="Prior." currentSort={sort} currentDir={dir} onSort={handleSort} /></th>}
-              {!isSplitView && <th className="w-[120px] px-3 py-2 hidden lg:table-cell"><SortableHeader field="local" label="Local" currentSort={sort} currentDir={dir} onSort={handleSort} /></th>}
-              {!isSplitView && <th className="w-[120px] px-3 py-2 hidden md:table-cell"><SortableHeader field="solicitante" label="Solicitante" currentSort={sort} currentDir={dir} onSort={handleSort} /></th>}
-              <th className="px-3 py-2 whitespace-nowrap"><SortableHeader field="status" label="Status" currentSort={sort} currentDir={dir} onSort={handleSort} /></th>
-              {!isSplitView && <th className="w-[100px] px-3 py-2 hidden xl:table-cell"><SortableHeader field="dataCriacao" label="Abertura" currentSort={sort} currentDir={dir} onSort={handleSort} /></th>}
-              <th className="w-[110px] px-3 py-2 hidden sm:table-cell"><SortableHeader field="dataVencimento" label="SLA / Venc." currentSort={sort} currentDir={dir} onSort={handleSort} /></th>
+              <th
+                className={`w-10 px-3 py-2 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected && !allSelected;
+                  }}
+                  onChange={toggleAll}
+                  className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer"
+                />
+              </th>
+              <th className="px-3 py-2 whitespace-nowrap">
+                <SortableHeader
+                  field="codigo"
+                  label="Código"
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
+              </th>
+              <th className="w-full px-3 py-2">
+                <SortableHeader
+                  field="titulo"
+                  label="Título"
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
+              </th>
+              {!isSplitView && (
+                <th className="w-[80px] px-3 py-2 hidden sm:table-cell">
+                  <SortableHeader
+                    field="prioridade"
+                    label="Prior."
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
+                </th>
+              )}
+              {!isSplitView && (
+                <th className="w-[120px] px-3 py-2 hidden lg:table-cell">
+                  <SortableHeader
+                    field="local"
+                    label="Local"
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
+                </th>
+              )}
+              {!isSplitView && (
+                <th className="w-[120px] px-3 py-2 hidden md:table-cell">
+                  <SortableHeader
+                    field="solicitante"
+                    label="Solicitante"
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
+                </th>
+              )}
+              <th className="px-3 py-2 whitespace-nowrap">
+                <SortableHeader
+                  field="status"
+                  label="Status"
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
+              </th>
+              {!isSplitView && (
+                <th className="w-[100px] px-3 py-2 hidden xl:table-cell">
+                  <SortableHeader
+                    field="dataCriacao"
+                    label="Abertura"
+                    currentSort={sort}
+                    currentDir={dir}
+                    onSort={handleSort}
+                  />
+                </th>
+              )}
+              <th className="w-[110px] px-3 py-2 hidden sm:table-cell">
+                <SortableHeader
+                  field="dataVencimento"
+                  label="SLA / Venc."
+                  currentSort={sort}
+                  currentDir={dir}
+                  onSort={handleSort}
+                />
+              </th>
               <th className={`w-10 px-3 py-2 ${isSplitView ? "hidden" : ""}`} />
             </tr>
           </thead>
@@ -261,7 +540,8 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
               const isSelected = selected.has(c.id);
               const isActive = activeTicketCodigo === c.codigo;
               const isFocused = focusedIndex === index;
-              const overdue = c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
+              const overdue =
+                c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
 
               if (isSplitView) {
                 return (
@@ -271,24 +551,55 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                     tabIndex={-1}
                     onClick={(e) => handleRowClick(e, c.codigo)}
                     className={`group transition-all cursor-pointer outline-none block border-b border-neutral-100 p-3 ${
-                      isFocused ? "bg-brand-navy/5 ring-2 ring-inset ring-brand-navy/50" : ""
+                      isFocused
+                        ? "bg-brand-navy/5 ring-2 ring-inset ring-brand-navy/50"
+                        : ""
                     } ${
-                      isActive ? "bg-brand-navy/10 border-l-4 border-l-brand-navy block" : isSelected ? "bg-brand-navy/5 border-l-4 border-l-transparent block" : "hover:bg-neutral-50 border-l-4 border-l-transparent block"
+                      isActive
+                        ? "bg-brand-navy/10 border-l-4 border-l-brand-navy block"
+                        : isSelected
+                          ? "bg-brand-navy/5 border-l-4 border-l-transparent block"
+                          : "hover:bg-neutral-50 border-l-4 border-l-transparent block"
                     } ${c.status === "FECHADO" ? "opacity-60" : ""}`}
                   >
                     <td className="block border-none p-0 w-full min-w-0">
                       <div className="flex flex-col gap-1.5 w-full min-w-0">
                         <div className="flex items-center justify-between w-full min-w-0">
-                          <span className="font-mono tabular-nums text-xs font-bold text-neutral-500">#{c.codigo}</span>
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}></span>{STATUS_LABEL[c.status] || c.status}
+                          <span className="font-mono tabular-nums text-xs font-bold text-neutral-500">
+                            #{c.codigo}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}
+                            ></span>
+                            {STATUS_LABEL[c.status] || c.status}
                           </span>
                         </div>
-                        <span className={`block truncate w-full font-medium text-sm ${isActive ? "text-brand-navy font-bold" : "text-neutral-900"}`}>{c.titulo}</span>
+                        <span
+                          className={`block truncate w-full font-medium text-sm ${isActive ? "text-brand-navy font-bold" : "text-neutral-900"}`}
+                        >
+                          {c.titulo}
+                        </span>
                         <div className="flex items-center justify-between mt-1 min-w-0">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}>{c.tipo?.prioridade || "—"}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
+                          >
+                            {c.tipo?.prioridade || "—"}
+                          </span>
                           <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
-                            {!mounted ? "—" : c.status === "FECHADO" ? fmtDateShort(c.dataAtendimento) : overdue ? <span className="text-red-600 font-bold">{fmtDateShort(c.dataVencimento)}</span> : fmtDateShort(c.dataVencimento)}
+                            {!mounted ? (
+                              "—"
+                            ) : c.status === "FECHADO" ? (
+                              fmtDateShort(c.dataAtendimento)
+                            ) : overdue ? (
+                              <span className="text-red-600 font-bold">
+                                {fmtDateShort(c.dataVencimento)}
+                              </span>
+                            ) : (
+                              fmtDateShort(c.dataVencimento)
+                            )}
                           </span>
                         </div>
                       </div>
@@ -298,19 +609,116 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
               }
 
               return (
-                <tr id={`ticket-row-${index}`} key={c.id} tabIndex={-1} onClick={(e) => handleRowClick(e, c.codigo)} className={`group transition-all cursor-pointer outline-none ${isFocused ? "ring-2 ring-inset ring-brand-navy/50 bg-brand-navy/5 " : ""} ${isActive ? "bg-brand-navy/10 border-l-2 border-l-brand-navy" : isSelected ? "bg-brand-navy/5 border-l-2 border-l-transparent" : "hover:bg-neutral-50 border-l-2 border-l-transparent"} ${c.status === "FECHADO" ? "opacity-60" : ""}`}>
-                  <td className={`${cellCls} text-center`}><input type="checkbox" checked={isSelected} onChange={() => toggleOne(c.id)} className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer" /></td>
-                  <td className={cellCls}><span className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md whitespace-nowrap ${isActive ? "bg-white shadow-sm border border-brand-navy/30 text-brand-navy font-bold" : "text-neutral-500 bg-neutral-100 border border-neutral-200"}`}>#{c.codigo}</span></td>
-                  <td className={`${cellCls} w-full max-w-0`}><span className={`block truncate font-medium transition-colors ${isActive ? "text-brand-navy font-bold" : "text-neutral-900 group-hover:text-brand-navy"}`} title={c.titulo}>{c.titulo}</span></td>
-                  <td className={`${cellCls} hidden sm:table-cell`}><span className={`text-[11px] uppercase tracking-wider whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}>{c.tipo?.prioridade === "Alta" && "↑ "}{c.tipo?.prioridade === "Baixa" && "↓ "}{c.tipo?.prioridade || "—"}</span></td>
-                  {!isSplitView && <td className={`${cellCls} hidden lg:table-cell text-xs text-neutral-500`}><span className="block truncate max-w-[120px]" title={c.local?.nome}>{c.local?.nome || "—"}</span></td>}
-                  {!isSplitView && <td className={`${cellCls} hidden md:table-cell text-xs text-neutral-500`}><span className="block truncate max-w-[120px]" title={c.usuarioCriacao?.nome}>{c.usuarioCriacao?.nome || "Sistema"}</span></td>}
-                  <td className={cellCls}><span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}><span className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}></span>{STATUS_LABEL[c.status] || c.status}</span></td>
-                  {!isSplitView && <td className={`${cellCls} hidden xl:table-cell whitespace-nowrap text-xs text-neutral-500 tabular-nums font-mono`}>{mounted ? fmtDateShort(c.dataCriacao) : "—"}</td>}
-                  <td className={`${cellCls} hidden sm:table-cell whitespace-nowrap font-mono tabular-nums`}>
-                    {!mounted ? "—" : c.status === "FECHADO" ? <span className="text-brand-green flex items-center gap-1 text-xs font-medium"><CheckCheck className="w-3.5 h-3.5" />{fmtDateShort(c.dataAtendimento)}</span> : overdue ? <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm"><AlertCircle className="w-3.5 h-3.5" />{fmtDate(c.dataVencimento)}</span> : <span className="text-neutral-600 text-xs font-medium">{fmtDate(c.dataVencimento)}</span>}
+                <tr
+                  id={`ticket-row-${index}`}
+                  key={c.id}
+                  tabIndex={-1}
+                  onClick={(e) => handleRowClick(e, c.codigo)}
+                  className={`group transition-all cursor-pointer outline-none ${isFocused ? "ring-2 ring-inset ring-brand-navy/50 bg-brand-navy/5 " : ""} ${isActive ? "bg-brand-navy/10 border-l-2 border-l-brand-navy" : isSelected ? "bg-brand-navy/5 border-l-2 border-l-transparent" : "hover:bg-neutral-50 border-l-2 border-l-transparent"} ${c.status === "FECHADO" ? "opacity-60" : ""}`}
+                >
+                  <td className={`${cellCls} text-center`}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOne(c.id)}
+                      className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer"
+                    />
                   </td>
-                  <td className={`${cellCls} text-center`}><Link href={`/chamado/${c.codigo}`} className="inline-flex items-center justify-center w-7 h-7 rounded-md text-neutral-400 hover:text-brand-navy hover:bg-brand-navy/10 transition-all" title="Abrir chamado em tela cheia"><ExternalLink className="w-3.5 h-3.5" /></Link></td>
+                  <td className={cellCls}>
+                    <span
+                      className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md whitespace-nowrap ${isActive ? "bg-white shadow-sm border border-brand-navy/30 text-brand-navy font-bold" : "text-neutral-500 bg-neutral-100 border border-neutral-200"}`}
+                    >
+                      #{c.codigo}
+                    </span>
+                  </td>
+                  <td className={`${cellCls} w-full max-w-0`}>
+                    <span
+                      className={`block truncate font-medium transition-colors ${isActive ? "text-brand-navy font-bold" : "text-neutral-900 group-hover:text-brand-navy"}`}
+                      title={c.titulo}
+                    >
+                      {c.titulo}
+                    </span>
+                  </td>
+                  <td className={`${cellCls} hidden sm:table-cell`}>
+                    <span
+                      className={`text-[11px] uppercase tracking-wider whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
+                    >
+                      {c.tipo?.prioridade === "Alta" && "↑ "}
+                      {c.tipo?.prioridade === "Baixa" && "↓ "}
+                      {c.tipo?.prioridade || "—"}
+                    </span>
+                  </td>
+                  {!isSplitView && (
+                    <td
+                      className={`${cellCls} hidden lg:table-cell text-xs text-neutral-500`}
+                    >
+                      <span
+                        className="block truncate max-w-[120px]"
+                        title={c.local?.nome}
+                      >
+                        {c.local?.nome || "—"}
+                      </span>
+                    </td>
+                  )}
+                  {!isSplitView && (
+                    <td
+                      className={`${cellCls} hidden md:table-cell text-xs text-neutral-500`}
+                    >
+                      <span
+                        className="block truncate max-w-[120px]"
+                        title={c.usuarioCriacao?.nome}
+                      >
+                        {c.usuarioCriacao?.nome || "Sistema"}
+                      </span>
+                    </td>
+                  )}
+                  <td className={cellCls}>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}
+                      ></span>
+                      {STATUS_LABEL[c.status] || c.status}
+                    </span>
+                  </td>
+                  {!isSplitView && (
+                    <td
+                      className={`${cellCls} hidden xl:table-cell whitespace-nowrap text-xs text-neutral-500 tabular-nums font-mono`}
+                    >
+                      {mounted ? fmtDateShort(c.dataCriacao) : "—"}
+                    </td>
+                  )}
+                  <td
+                    className={`${cellCls} hidden sm:table-cell whitespace-nowrap font-mono tabular-nums`}
+                  >
+                    {!mounted ? (
+                      "—"
+                    ) : c.status === "FECHADO" ? (
+                      <span className="text-brand-green flex items-center gap-1 text-xs font-medium">
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        {fmtDateShort(c.dataAtendimento)}
+                      </span>
+                    ) : overdue ? (
+                      <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {fmtDate(c.dataVencimento)}
+                      </span>
+                    ) : (
+                      <span className="text-neutral-600 text-xs font-medium">
+                        {fmtDate(c.dataVencimento)}
+                      </span>
+                    )}
+                  </td>
+                  <td className={`${cellCls} text-center`}>
+                    <Link
+                      href={`/chamado/${c.codigo}`}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md text-neutral-400 hover:text-brand-navy hover:bg-brand-navy/10 transition-all"
+                      title="Abrir chamado em tela cheia"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
@@ -437,7 +845,6 @@ export default function TicketsTable({ chamados, sort, dir, isSplitView, activeT
                 <option value="">Selecione o status...</option>
                 <option value="SOLICITADO">SOLICITADO</option>
                 <option value="EM_ATENDIMENTO">EM_ATENDIMENTO</option>
-                {/* REMOVIDO PENDENTE AQUI PARA FORÇAR A JUSTIFICATIVA INDIVIDUAL */}
               </select>
             </div>
             <div className="px-5 py-4 bg-neutral-50 border-t border-neutral-100 flex justify-end gap-2">
