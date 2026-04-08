@@ -10,6 +10,7 @@ import { Plus, FileText, Filter as FilterIcon, X } from "lucide-react";
 import DashboardFilters from "@/components/DashboardFilters";
 import TicketsTable from "@/components/TicketsTable";
 import TicketDetailsPanel from "@/components/TicketDetailsPanel";
+import DashboardSearch from "@/components/DashboardSearch";
 
 // ── SERVER ACTION: Limpa o cookie de filtros e redireciona ──
 async function clearFiltersAction() {
@@ -283,7 +284,8 @@ export default async function DashboardPage({
               Caixa de entrada operacional
             </p>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto justify-end">
+            <DashboardSearch />
             <Link
               href={
                 buildUrl(page) +
@@ -303,7 +305,6 @@ export default async function DashboardPage({
                 <span className="flex w-2 h-2 rounded-full bg-brand-navy absolute top-2 right-2 md:relative md:top-0 md:right-0"></span>
               )}
             </Link>
-
             <Link
               href="/chamado/novo"
               className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex items-center justify-center bg-brand-navy text-white z-[60] md:relative md:bottom-auto md:right-auto md:w-auto md:h-auto md:rounded-md md:px-5 md:py-2.5 md:z-0 md:shadow-none hover:bg-brand-navy/90 focus:ring-4 focus:ring-brand-navy/20 transition-all font-semibold"

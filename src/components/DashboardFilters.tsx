@@ -127,6 +127,7 @@ export default function DashboardFilters({
   const handleClear = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
 
+    params.delete("q");
     params.delete("status");
     params.delete("localId");
     params.delete("criadorId");
