@@ -16,7 +16,7 @@ import {
   LayoutGrid,
   Calendar,
   UserCog,
-  Clock, // <-- NOVOS ÍCONES
+  Clock,
 } from "lucide-react";
 import {
   bulkAtribuir,
@@ -315,8 +315,11 @@ export default function TicketsTable({
   const cellCls = "px-3 text-sm text-neutral-700 py-3";
 
   const isGrid = viewMode === "grid";
+
+  // SOLUÇÃO: Se estiver no preview (isSplitView), força sempre 'grid-cols-1'.
+  // Senão, usa as colunas normais de grid.
   const cardsContainerClass = isGrid
-    ? `grid gap-4 grid-cols-1 sm:grid-cols-2 ${isSplitView ? "lg:grid-cols-1 xl:grid-cols-2" : "lg:grid-cols-3 xl:grid-cols-4"}`
+    ? `grid gap-4 ${isSplitView ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}`
     : `flex flex-col gap-3 md:hidden ${isSplitView ? "hidden" : ""}`;
 
   return (
@@ -361,16 +364,17 @@ export default function TicketsTable({
           const isSelected = selected.has(c.id);
           const overdue =
             c.status !== "FECHADO" && isSlaOverdue(c.dataVencimento);
+          const isActive = activeTicketCodigo === c.codigo;
 
           return (
             <div
               key={c.id}
               onClick={(e) => handleRowClick(e, c.codigo)}
-              className={`relative flex flex-col p-4 bg-white rounded-xl border shadow-sm transition-all active:scale-[0.98] cursor-pointer hover:border-brand-navy/30 ${isSelected ? "border-brand-navy ring-1 ring-brand-navy/20" : "border-neutral-200"} ${c.status === "FECHADO" ? "opacity-70" : ""}`}
+              className={`relative flex flex-col p-4 bg-white rounded-xl border shadow-sm transition-all active:scale-[0.98] cursor-pointer hover:border-brand-navy/30 ${isActive ? "ring-2 ring-brand-navy border-brand-navy" : isSelected ? "border-brand-navy ring-1 ring-brand-navy/20" : "border-neutral-200"} ${c.status === "FECHADO" ? "opacity-70" : ""}`}
             >
               {/* Topo do Card */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between mb-3 min-w-0 gap-2">
+                <div className="flex items-center gap-3 shrink-0">
                   <div className="p-1 -ml-1">
                     <input
                       type="checkbox"
@@ -384,7 +388,7 @@ export default function TicketsTable({
                   </span>
                 </div>
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap border ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap border shrink-0 ${STATUS_UI[c.status]?.bg || STATUS_UI["FECHADO"].bg} ${STATUS_UI[c.status]?.border || STATUS_UI["FECHADO"].border} ${STATUS_UI[c.status]?.text || STATUS_UI["FECHADO"].text}`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${STATUS_UI[c.status]?.dot || STATUS_UI["FECHADO"].dot}`}
@@ -393,7 +397,11 @@ export default function TicketsTable({
                 </span>
               </div>
 
-              <h4 className="text-[15px] font-bold text-neutral-900 mb-2 leading-snug">
+              {/* Adicionado line-clamp e break-words para o título */}
+              <h4
+                className="text-[15px] font-bold text-neutral-900 mb-2 leading-snug line-clamp-2 break-words"
+                title={c.titulo}
+              >
                 {c.titulo}
               </h4>
               <span
@@ -402,41 +410,45 @@ export default function TicketsTable({
                 {c.tipo?.prioridade || "Sem Prioridade"}
               </span>
 
-              {/* NOVO: Área de Destaque Indispensável (Técnico e SLA) */}
+              {/* Área de Destaque Indispensável (Técnico e SLA) */}
               <div className="mt-auto p-3 rounded-lg bg-neutral-50 border border-neutral-100 flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider shrink-0">
                     Técnico
                   </span>
                   {c.tecnico ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-navy">
-                      <UserCog className="w-3.5 h-3.5" /> {c.tecnico.nome}
+                    <span
+                      className="inline-flex items-center gap-1 text-xs font-bold text-brand-navy min-w-0"
+                      title={c.tecnico.nome}
+                    >
+                      <UserCog className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{c.tecnico.nome}</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 shrink-0">
                       <AlertCircle className="w-3 h-3" /> Aguardando
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider shrink-0">
                     SLA / Prazo
                   </span>
                   {!mounted ? (
                     "—"
                   ) : c.status === "FECHADO" ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-green">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-green shrink-0">
                       <CheckCheck className="w-3.5 h-3.5" />{" "}
                       {fmtDateShort(c.dataAtendimento)}
                     </span>
                   ) : overdue ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded shadow-sm animate-pulse">
-                      <Clock className="w-3.5 h-3.5" /> Vencido:{" "}
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded shadow-sm animate-pulse shrink-0">
+                      <Clock className="w-3.5 h-3.5" />{" "}
                       {fmtDateShort(c.dataVencimento)}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-700">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-700 shrink-0">
                       <Calendar className="w-3.5 h-3.5" />{" "}
                       {fmtDateShort(c.dataVencimento)}
                     </span>
@@ -512,8 +524,6 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
-
-              {/* NOVAS COLUNAS PRINCIPAIS */}
               <th className="px-3 py-3 whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Técnico
               </th>
@@ -526,7 +536,6 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
-
               <th className={`w-10 px-3 py-3 ${isSplitView ? "hidden" : ""}`} />
             </tr>
           </thead>
@@ -574,22 +583,23 @@ export default function TicketsTable({
                         </div>
                         <span
                           className={`block truncate w-full font-medium text-sm ${isActive ? "text-brand-navy font-bold" : "text-neutral-900"}`}
+                          title={c.titulo}
                         >
                           {c.titulo}
                         </span>
 
-                        {/* Novo layout reduzido para split view */}
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-brand-navy/5 min-w-0">
                           {c.tecnico ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-navy">
-                              <UserCog className="w-3 h-3" /> {c.tecnico.nome}
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-navy min-w-0">
+                              <UserCog className="w-3 h-3 shrink-0" />{" "}
+                              <span className="truncate">{c.tecnico.nome}</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-1 rounded">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-1 rounded shrink-0">
                               <AlertCircle className="w-3 h-3" /> Sem Técnico
                             </span>
                           )}
-                          <span className="text-[11px] font-mono tabular-nums">
+                          <span className="text-[11px] font-mono tabular-nums shrink-0 ml-2">
                             {!mounted ? (
                               "—"
                             ) : c.status === "FECHADO" ? (
@@ -676,11 +686,14 @@ export default function TicketsTable({
                     </span>
                   </td>
 
-                  {/* COLUNA TÉCNICO DESTACADA */}
                   <td className={cellCls}>
                     {c.tecnico ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-brand-navy bg-brand-navy/5 border border-brand-navy/10 whitespace-nowrap shadow-sm">
-                        <UserCog className="w-3.5 h-3.5" /> {c.tecnico.nome}
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-brand-navy bg-brand-navy/5 border border-brand-navy/10 whitespace-nowrap shadow-sm max-w-[150px]"
+                        title={c.tecnico.nome}
+                      >
+                        <UserCog className="w-3.5 h-3.5 shrink-0" />{" "}
+                        <span className="truncate">{c.tecnico.nome}</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 whitespace-nowrap shadow-sm">
@@ -689,7 +702,6 @@ export default function TicketsTable({
                     )}
                   </td>
 
-                  {/* COLUNA SLA DESTACADA */}
                   <td
                     className={`${cellCls} whitespace-nowrap font-mono tabular-nums`}
                   >
@@ -729,7 +741,7 @@ export default function TicketsTable({
         </table>
       </div>
 
-      {/* AÇÕES EM LOTE (Mantidas exatamente iguais) */}
+      {/* AÇÕES EM LOTE */}
       {someSelected && (
         <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[45] animate-in fade-in slide-in-from-bottom-6 duration-200">
           <div className="flex items-center gap-3 bg-white  border border-neutral-200  shadow-2xl shadow-neutral-900/20 rounded-md px-5 py-3">
