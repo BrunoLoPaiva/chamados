@@ -223,6 +223,7 @@ export default async function DashboardPage({
         local: true,
         departamentoDestino: true,
         colaboradores: true,
+        tecnico: true,
       },
       orderBy:
         Object.keys(orderByClause).length > 0
