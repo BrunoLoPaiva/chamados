@@ -1,0 +1,8 @@
+ - Usuario comum não deve conseguir atribuir, alterar status ou finalizar chamado.
+ 
+ - Automatizar criação de chamado pelo email
+ 
+ - Verificar duplicação de chamado no momento da abertura
+ 
+ - Card e tabelas com informação mais importantes a vista (local/data vencimento/tecnico atribuído)
+ 

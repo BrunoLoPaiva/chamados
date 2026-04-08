@@ -38,9 +38,11 @@ export default async function NovoChamadoPage() {
 
   const locais = await prisma.local.findMany({
     include: {
-      children: true,
+      children: {
+        where: { ativo: true },
+      },
     },
-    where: { parentId: null, ativo: true },
+    where: { parentId: null, ativo: true }, // Aqui já filtra os pais, mas faltava nos filhos
     orderBy: { nome: "asc" },
   });
 
