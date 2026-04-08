@@ -12,9 +12,11 @@ import {
   UserCheck,
   AlertCircle,
   X,
-  LayoutList, // <-- NOVO ÍCONE
-  LayoutGrid, // <-- NOVO ÍCONE
+  LayoutList,
+  LayoutGrid,
   Calendar,
+  UserCog,
+  Clock, // <-- NOVOS ÍCONES
 } from "lucide-react";
 import {
   bulkAtribuir,
@@ -165,7 +167,7 @@ export default function TicketsTable({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table"); // <-- NOVO ESTADO
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkStatusVal, setBulkStatusVal] = useState("");
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -310,9 +312,8 @@ export default function TicketsTable({
     });
   };
 
-  const cellCls = "px-3 text-sm text-neutral-700 py-2";
+  const cellCls = "px-3 text-sm text-neutral-700 py-3";
 
-  // Lógica para alternar as classes CSS baseadas no modo de visualização
   const isGrid = viewMode === "grid";
   const cardsContainerClass = isGrid
     ? `grid gap-4 grid-cols-1 sm:grid-cols-2 ${isSplitView ? "lg:grid-cols-1 xl:grid-cols-2" : "lg:grid-cols-3 xl:grid-cols-4"}`
@@ -348,7 +349,7 @@ export default function TicketsTable({
         </div>
       </div>
 
-      {/* VIEW CARDS (Mobile sempre usa, Desktop usa se Grid estiver ativo) */}
+      {/* VIEW CARDS (Grid / Mobile) */}
       <div className={`animate-in fade-in duration-300 ${cardsContainerClass}`}>
         {chamados.length === 0 && (
           <div className="text-center py-12 bg-white rounded-xl border border-neutral-200 text-neutral-500 text-sm col-span-full">
@@ -367,6 +368,7 @@ export default function TicketsTable({
               onClick={(e) => handleRowClick(e, c.codigo)}
               className={`relative flex flex-col p-4 bg-white rounded-xl border shadow-sm transition-all active:scale-[0.98] cursor-pointer hover:border-brand-navy/30 ${isSelected ? "border-brand-navy ring-1 ring-brand-navy/20" : "border-neutral-200"} ${c.status === "FECHADO" ? "opacity-70" : ""}`}
             >
+              {/* Topo do Card */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="p-1 -ml-1">
@@ -394,28 +396,48 @@ export default function TicketsTable({
               <h4 className="text-[15px] font-bold text-neutral-900 mb-2 leading-snug">
                 {c.titulo}
               </h4>
+              <span
+                className={`text-[11px] uppercase font-bold tracking-wider mb-4 ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
+              >
+                {c.tipo?.prioridade || "Sem Prioridade"}
+              </span>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 mt-auto pt-3 border-t border-neutral-100">
-                <span
-                  className={`text-[11px] uppercase font-bold tracking-wider ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
-                >
-                  {c.tipo?.prioridade || "Sem Prioridade"}
-                </span>
+              {/* NOVO: Área de Destaque Indispensável (Técnico e SLA) */}
+              <div className="mt-auto p-3 rounded-lg bg-neutral-50 border border-neutral-100 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                    Técnico
+                  </span>
+                  {c.tecnico ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-navy">
+                      <UserCog className="w-3.5 h-3.5" /> {c.tecnico.nome}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">
+                      <AlertCircle className="w-3 h-3" /> Aguardando
+                    </span>
+                  )}
+                </div>
 
-                <div className="flex items-center gap-1.5 text-xs font-mono tabular-nums">
-                  <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                    SLA / Prazo
+                  </span>
                   {!mounted ? (
                     "—"
                   ) : c.status === "FECHADO" ? (
-                    <span className="text-brand-green font-medium">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-green">
+                      <CheckCheck className="w-3.5 h-3.5" />{" "}
                       {fmtDateShort(c.dataAtendimento)}
                     </span>
                   ) : overdue ? (
-                    <span className="text-red-600 font-bold">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded shadow-sm animate-pulse">
+                      <Clock className="w-3.5 h-3.5" /> Vencido:{" "}
                       {fmtDateShort(c.dataVencimento)}
                     </span>
                   ) : (
-                    <span className="text-neutral-500">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-700">
+                      <Calendar className="w-3.5 h-3.5" />{" "}
                       {fmtDateShort(c.dataVencimento)}
                     </span>
                   )}
@@ -426,11 +448,11 @@ export default function TicketsTable({
         })}
       </div>
 
-      {/* VIEW DESKTOP: TABELA */}
+      {/* VIEW TABELA (Lista Clássica) */}
       <div
         className={`w-full rounded-md border border-neutral-200 shadow-sm bg-white animate-in fade-in duration-300 overflow-x-auto ${isSplitView ? "" : "max-w-[100vw]"} ${!isGrid ? "hidden md:block" : "hidden"}`}
       >
-        <table className="w-full text-left border-collapse table-auto min-w-[600px] md:min-w-full">
+        <table className="w-full text-left border-collapse table-auto min-w-[700px] md:min-w-full">
           <thead
             className={
               isSplitView
@@ -440,7 +462,7 @@ export default function TicketsTable({
           >
             <tr className="bg-neutral-50 border-b border-neutral-200">
               <th
-                className={`w-10 px-3 py-2 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
+                className={`w-10 px-3 py-3 text-center ${isSplitView ? "hidden md:table-cell" : ""}`}
               >
                 <input
                   type="checkbox"
@@ -452,7 +474,7 @@ export default function TicketsTable({
                   className="w-4 h-4 rounded border-neutral-300 accent-brand-navy cursor-pointer"
                 />
               </th>
-              <th className="px-3 py-2 whitespace-nowrap">
+              <th className="px-3 py-3 whitespace-nowrap">
                 <SortableHeader
                   field="codigo"
                   label="Código"
@@ -461,7 +483,7 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
-              <th className="w-full px-3 py-2">
+              <th className="w-full px-3 py-3">
                 <SortableHeader
                   field="titulo"
                   label="Título"
@@ -471,29 +493,7 @@ export default function TicketsTable({
                 />
               </th>
               {!isSplitView && (
-                <th className="w-[80px] px-3 py-2 hidden sm:table-cell">
-                  <SortableHeader
-                    field="prioridade"
-                    label="Prior."
-                    currentSort={sort}
-                    currentDir={dir}
-                    onSort={handleSort}
-                  />
-                </th>
-              )}
-              {!isSplitView && (
-                <th className="w-[120px] px-3 py-2 hidden lg:table-cell">
-                  <SortableHeader
-                    field="local"
-                    label="Local"
-                    currentSort={sort}
-                    currentDir={dir}
-                    onSort={handleSort}
-                  />
-                </th>
-              )}
-              {!isSplitView && (
-                <th className="w-[120px] px-3 py-2 hidden md:table-cell">
+                <th className="w-[120px] px-3 py-3 hidden md:table-cell">
                   <SortableHeader
                     field="solicitante"
                     label="Solicitante"
@@ -503,7 +503,7 @@ export default function TicketsTable({
                   />
                 </th>
               )}
-              <th className="px-3 py-2 whitespace-nowrap">
+              <th className="px-3 py-3 whitespace-nowrap">
                 <SortableHeader
                   field="status"
                   label="Status"
@@ -512,27 +512,22 @@ export default function TicketsTable({
                   onSort={handleSort}
                 />
               </th>
-              {!isSplitView && (
-                <th className="w-[100px] px-3 py-2 hidden xl:table-cell">
-                  <SortableHeader
-                    field="dataCriacao"
-                    label="Abertura"
-                    currentSort={sort}
-                    currentDir={dir}
-                    onSort={handleSort}
-                  />
-                </th>
-              )}
-              <th className="w-[110px] px-3 py-2 hidden sm:table-cell">
+
+              {/* NOVAS COLUNAS PRINCIPAIS */}
+              <th className="px-3 py-3 whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Técnico
+              </th>
+              <th className="w-[120px] px-3 py-3">
                 <SortableHeader
                   field="dataVencimento"
-                  label="SLA / Venc."
+                  label="SLA / Prazo"
                   currentSort={sort}
                   currentDir={dir}
                   onSort={handleSort}
                 />
               </th>
-              <th className={`w-10 px-3 py-2 ${isSplitView ? "hidden" : ""}`} />
+
+              <th className={`w-10 px-3 py-3 ${isSplitView ? "hidden" : ""}`} />
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -582,23 +577,36 @@ export default function TicketsTable({
                         >
                           {c.titulo}
                         </span>
-                        <div className="flex items-center justify-between mt-1 min-w-0">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
-                          >
-                            {c.tipo?.prioridade || "—"}
-                          </span>
-                          <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
+
+                        {/* Novo layout reduzido para split view */}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-brand-navy/5 min-w-0">
+                          {c.tecnico ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-navy">
+                              <UserCog className="w-3 h-3" /> {c.tecnico.nome}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 px-1 rounded">
+                              <AlertCircle className="w-3 h-3" /> Sem Técnico
+                            </span>
+                          )}
+                          <span className="text-[11px] font-mono tabular-nums">
                             {!mounted ? (
                               "—"
                             ) : c.status === "FECHADO" ? (
-                              fmtDateShort(c.dataAtendimento)
+                              <span className="text-brand-green font-bold flex items-center gap-1">
+                                <CheckCheck className="w-3 h-3" />
+                                {fmtDateShort(c.dataAtendimento)}
+                              </span>
                             ) : overdue ? (
-                              <span className="text-red-600 font-bold">
+                              <span className="text-white bg-red-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
                                 {fmtDateShort(c.dataVencimento)}
                               </span>
                             ) : (
-                              fmtDateShort(c.dataVencimento)
+                              <span className="font-bold flex items-center gap-1 text-neutral-600">
+                                <Calendar className="w-3 h-3" />
+                                {fmtDateShort(c.dataVencimento)}
+                              </span>
                             )}
                           </span>
                         </div>
@@ -638,28 +646,13 @@ export default function TicketsTable({
                     >
                       {c.titulo}
                     </span>
-                  </td>
-                  <td className={`${cellCls} hidden sm:table-cell`}>
                     <span
-                      className={`text-[11px] uppercase tracking-wider whitespace-nowrap ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
+                      className={`text-[10px] uppercase font-bold tracking-wider mt-0.5 block ${PRIORITY_CLASS[c.tipo?.prioridade || ""] || PRIORITY_CLASS["Baixa"]}`}
                     >
-                      {c.tipo?.prioridade === "Alta" && "↑ "}
-                      {c.tipo?.prioridade === "Baixa" && "↓ "}
-                      {c.tipo?.prioridade || "—"}
+                      {c.tipo?.prioridade}
                     </span>
                   </td>
-                  {!isSplitView && (
-                    <td
-                      className={`${cellCls} hidden lg:table-cell text-xs text-neutral-500`}
-                    >
-                      <span
-                        className="block truncate max-w-[120px]"
-                        title={c.local?.nome}
-                      >
-                        {c.local?.nome || "—"}
-                      </span>
-                    </td>
-                  )}
+
                   {!isSplitView && (
                     <td
                       className={`${cellCls} hidden md:table-cell text-xs text-neutral-500`}
@@ -682,34 +675,44 @@ export default function TicketsTable({
                       {STATUS_LABEL[c.status] || c.status}
                     </span>
                   </td>
-                  {!isSplitView && (
-                    <td
-                      className={`${cellCls} hidden xl:table-cell whitespace-nowrap text-xs text-neutral-500 tabular-nums font-mono`}
-                    >
-                      {mounted ? fmtDateShort(c.dataCriacao) : "—"}
-                    </td>
-                  )}
+
+                  {/* COLUNA TÉCNICO DESTACADA */}
+                  <td className={cellCls}>
+                    {c.tecnico ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-brand-navy bg-brand-navy/5 border border-brand-navy/10 whitespace-nowrap shadow-sm">
+                        <UserCog className="w-3.5 h-3.5" /> {c.tecnico.nome}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 whitespace-nowrap shadow-sm">
+                        <AlertCircle className="w-3.5 h-3.5" /> Aguardando
+                      </span>
+                    )}
+                  </td>
+
+                  {/* COLUNA SLA DESTACADA */}
                   <td
-                    className={`${cellCls} hidden sm:table-cell whitespace-nowrap font-mono tabular-nums`}
+                    className={`${cellCls} whitespace-nowrap font-mono tabular-nums`}
                   >
                     {!mounted ? (
                       "—"
                     ) : c.status === "FECHADO" ? (
-                      <span className="text-brand-green flex items-center gap-1 text-xs font-medium">
-                        <CheckCheck className="w-3.5 h-3.5" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-brand-green bg-brand-green/5 border border-brand-green/10 shadow-sm">
+                        <CheckCheck className="w-3.5 h-3.5" />{" "}
                         {fmtDateShort(c.dataAtendimento)}
                       </span>
                     ) : overdue ? (
-                      <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
-                        <AlertCircle className="w-3.5 h-3.5" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-red-600 shadow-md animate-pulse border border-red-700">
+                        <Clock className="w-3.5 h-3.5" /> Vencido:{" "}
                         {fmtDate(c.dataVencimento)}
                       </span>
                     ) : (
-                      <span className="text-neutral-600 text-xs font-medium">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-neutral-700 bg-neutral-100 border border-neutral-200 shadow-sm">
+                        <Calendar className="w-3.5 h-3.5" />{" "}
                         {fmtDate(c.dataVencimento)}
                       </span>
                     )}
                   </td>
+
                   <td className={`${cellCls} text-center`}>
                     <Link
                       href={`/chamado/${c.codigo}`}
@@ -726,6 +729,7 @@ export default function TicketsTable({
         </table>
       </div>
 
+      {/* AÇÕES EM LOTE (Mantidas exatamente iguais) */}
       {someSelected && (
         <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[45] animate-in fade-in slide-in-from-bottom-6 duration-200">
           <div className="flex items-center gap-3 bg-white  border border-neutral-200  shadow-2xl shadow-neutral-900/20 rounded-md px-5 py-3">
