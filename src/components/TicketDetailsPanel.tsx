@@ -11,18 +11,16 @@ import {
   Building2,
   UserCog,
   Paperclip,
-  Hand,
   Trash2,
   Expand,
   PlayCircle,
   PauseCircle,
-  Zap
+  Zap,
+  UserPlus,
 } from "lucide-react";
 import {
   atribuirChamado,
-  bulkUpdateStatus,
   excluirChamado,
-  adicionarColaborador,
   pausarChamado,
   retomarChamado,
 } from "@/app/actions/tickets";
@@ -80,6 +78,10 @@ export default function TicketDetailsPanel({
   const [pausarJustificativa, setPausarJustificativa] = useState("");
   const [pausarDataLimite, setPausarDataLimite] = useState("");
 
+  // Estados do Formulário de Atribuição (NOVO)
+  const [isAtribuirOpen, setIsAtribuirOpen] = useState(false);
+  const [atribuirTecnicoId, setAtribuirTecnicoId] = useState("");
+
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -89,17 +91,25 @@ export default function TicketDetailsPanel({
     router.push(`/dashboard?${params.toString()}`, { scroll: false });
   };
 
-  const handleAssumirChamado = () => {
-    setOptTecnicoId(currentUserId);
+  const handleAtribuirSubmit = () => {
+    if (!atribuirTecnicoId) {
+      alert("Por favor, selecione um técnico.");
+      return;
+    }
+    const tecId = Number(atribuirTecnicoId);
+    setOptTecnicoId(tecId);
     if (optStatus !== "EM_ATENDIMENTO") setOptStatus("EM_ATENDIMENTO");
+
     startTransition(async () => {
       try {
         const formData = new FormData();
         formData.append("codigo", chamado.codigo);
-        formData.append("tecnicoId", String(currentUserId));
+        formData.append("tecnicoId", String(tecId));
         await atribuirChamado(formData);
+        setIsAtribuirOpen(false);
+        setAtribuirTecnicoId("");
       } catch (error) {
-        alert("Erro ao assumir chamado.");
+        alert("Erro ao atribuir chamado.");
       }
     });
   };
@@ -252,7 +262,7 @@ export default function TicketDetailsPanel({
           </div>
 
           <div className="w-full lg:w-[320px] xl:w-[360px] flex flex-col min-w-0">
-            {/* AÇÕES RÁPIDAS (Agora são Fixed no Mobile e Sticky no PC) */}
+            {/* AÇÕES RÁPIDAS */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-neutral-200 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] md:relative md:p-5 md:bg-neutral-50/50 md:border-t-0 md:border-l md:border-neutral-100 md:shadow-none md:z-auto">
               {optStatus !== "FECHADO" && (
                 <div className="flex flex-col gap-2 p-0 md:p-4 md:bg-white md:border md:border-neutral-200 md:rounded-md md:shadow-sm">
@@ -260,66 +270,128 @@ export default function TicketDetailsPanel({
                     <Zap className="w-4 h-4 text-brand-navy" /> Ações Rápidas
                   </span>
 
-                  {!optTecnicoId && podeAtribuir && (
-                    <button
-                      onClick={handleAssumirChamado}
-                      disabled={isPending}
-                      className="flex items-center justify-center gap-2 w-full py-3 md:py-2 bg-brand-navy text-white text-sm font-bold rounded-lg md:rounded-md shadow-md md:shadow-sm hover:bg-brand-navy/90 transition-colors disabled:opacity-50"
-                    >
-                      <Hand className="w-5 h-5 md:w-4 md:h-4" />
-                      {isPending ? "Processando..." : "Assumir Chamado"}
-                    </button>
+                  {podeAtribuir && optStatus !== "FECHADO" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsAtribuirOpen(!isAtribuirOpen);
+                          if (isPausarOpen) setIsPausarOpen(false);
+                        }}
+                        disabled={isPending}
+                        className={`flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold rounded-lg md:rounded-md transition-all focus:ring-2 focus:outline-none disabled:opacity-50 ${isAtribuirOpen ? "bg-neutral-100 text-neutral-900 shadow-inner" : !optTecnicoId ? "bg-brand-navy text-white shadow-md md:shadow-sm hover:bg-brand-navy/90" : "bg-white border border-neutral-300 text-neutral-700 shadow-md md:shadow-sm hover:bg-neutral-50 hover:text-neutral-900"}`}
+                      >
+                        <UserPlus className="w-5 h-5 md:w-4 md:h-4" />
+                        {!optTecnicoId
+                          ? "Atribuir Chamado"
+                          : "Transferir Chamado"}
+                      </button>
+
+                      {isAtribuirOpen && (
+                        <div className="mt-1 p-4 bg-neutral-50 border border-neutral-200 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-neutral-700">
+                              Selecione o Técnico
+                            </label>
+                            <select
+                              value={atribuirTecnicoId}
+                              onChange={(e) =>
+                                setAtribuirTecnicoId(e.target.value)
+                              }
+                              className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none"
+                            >
+                              <option value="">Selecione...</option>
+                              {usuarios.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.nome}{" "}
+                                  {u.id === currentUserId ? "(Eu)" : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200/60 mt-1">
+                            <button
+                              onClick={() => setIsAtribuirOpen(false)}
+                              className="px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200/50 rounded-md transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={handleAtribuirSubmit}
+                              disabled={!atribuirTecnicoId || isPending}
+                              className="px-4 py-1.5 text-xs font-bold bg-brand-navy text-white shadow-sm rounded-md hover:bg-brand-navy/90 transition-all disabled:opacity-50"
+                            >
+                              Confirmar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {optTecnicoId && podeAtribuir && optStatus === "EM_ATENDIMENTO" && (
-                    <button
-                      onClick={() => setIsPausarOpen(!isPausarOpen)}
-                      disabled={isPending}
-                      className={`flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold rounded-lg md:rounded-md transition-all focus:ring-2 focus:outline-none disabled:opacity-50 ${isPausarOpen ? "bg-neutral-100 text-neutral-900 shadow-inner" : "bg-white border border-neutral-300 text-neutral-700 shadow-md md:shadow-sm hover:bg-neutral-50 hover:text-neutral-900"}`}
-                    >
-                      <PauseCircle className="w-5 h-5 md:w-4 md:h-4" />
-                      Pausar Atendimento
-                    </button>
-                  )}
-
-                  {isPausarOpen && optStatus === "EM_ATENDIMENTO" && (
-                    <div className="mt-1 p-4 bg-neutral-50 border border-neutral-200 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-neutral-700">Justificativa da Pausa</label>
-                        <textarea
-                          value={pausarJustificativa}
-                          onChange={(e) => setPausarJustificativa(e.target.value)}
-                          placeholder="Informe o motivo..."
-                          className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none resize-none transition-all"
-                          rows={2}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-neutral-700">Retomar até (SLA)</label>
-                        <input
-                          type="date"
-                          value={pausarDataLimite}
-                          onChange={(e) => setPausarDataLimite(e.target.value)}
-                          className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200/60 mt-1">
+                  {optTecnicoId &&
+                    podeAtribuir &&
+                    optStatus === "EM_ATENDIMENTO" && (
+                      <>
                         <button
-                          onClick={() => setIsPausarOpen(false)}
-                          className="px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200/50 rounded-md transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          onClick={handlePausarSubmit}
+                          onClick={() => {
+                            setIsPausarOpen(!isPausarOpen);
+                            if (isAtribuirOpen) setIsAtribuirOpen(false);
+                          }}
                           disabled={isPending}
-                          className="px-4 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500/20 transition-all disabled:opacity-50"
+                          className={`flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold rounded-lg md:rounded-md transition-all focus:ring-2 focus:outline-none disabled:opacity-50 ${isPausarOpen ? "bg-neutral-100 text-neutral-900 shadow-inner" : "bg-white border border-neutral-300 text-neutral-700 shadow-md md:shadow-sm hover:bg-neutral-50 hover:text-neutral-900"}`}
                         >
-                          Confirmar Pausa
+                          <PauseCircle className="w-5 h-5 md:w-4 md:h-4" />
+                          Pausar Atendimento
                         </button>
-                      </div>
-                    </div>
-                  )}
+
+                        {isPausarOpen && (
+                          <div className="mt-1 p-4 bg-neutral-50 border border-neutral-200 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-neutral-700">
+                                Justificativa da Pausa
+                              </label>
+                              <textarea
+                                value={pausarJustificativa}
+                                onChange={(e) =>
+                                  setPausarJustificativa(e.target.value)
+                                }
+                                placeholder="Informe o motivo..."
+                                className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none resize-none transition-all"
+                                rows={2}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-neutral-700">
+                                Retomar até (SLA)
+                              </label>
+                              <input
+                                type="date"
+                                value={pausarDataLimite}
+                                onChange={(e) =>
+                                  setPausarDataLimite(e.target.value)
+                                }
+                                className="w-full text-sm px-3 py-2 rounded-md bg-white border border-neutral-300 focus:ring-2 focus:ring-brand-navy/20 focus:border-brand-navy outline-none transition-all"
+                              />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2 border-t border-neutral-200/60 mt-1">
+                              <button
+                                onClick={() => setIsPausarOpen(false)}
+                                className="px-3 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200/50 rounded-md transition-colors"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={handlePausarSubmit}
+                                disabled={isPending}
+                                className="px-4 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500/20 transition-all disabled:opacity-50"
+                              >
+                                Confirmar Pausa
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
 
                   {optTecnicoId && podeAtribuir && optStatus === "PENDENTE" && (
                     <button
@@ -333,7 +405,9 @@ export default function TicketDetailsPanel({
                   )}
 
                   {isAdmin && (
-                    <div className={`${(optTecnicoId && podeAtribuir) ? 'pt-3 mt-1 border-t border-neutral-100' : ''}`}>
+                    <div
+                      className={`${podeAtribuir ? "pt-3 mt-1 border-t border-neutral-100" : ""}`}
+                    >
                       <button
                         onClick={handleExcluirChamado}
                         disabled={isPending}
@@ -348,101 +422,106 @@ export default function TicketDetailsPanel({
               )}
             </div>
 
-            {/* METADADOS / DETALHES (Estes continuam na rolagem normal) */}
+            {/* METADADOS / DETALHES */}
             <div className="p-5 bg-neutral-50/50 border-l border-neutral-100 pb-32 md:pb-5">
               <h3 className="text-xs font-bold text-neutral-900 mb-4 uppercase tracking-wider">
                 Detalhes
               </h3>
-                <div className="flex flex-col divide-y divide-neutral-200 border-y border-neutral-200 ">
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium">
-                      Solicitante
-                    </span>
-                    <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800 text-right">
-                      <User className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                      <span className="truncate max-w-[140px] xl:max-w-[160px]">
-                        {chamado.usuarioCriacao?.nome || "Sistema"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium">
-                      Departamento
-                    </span>
-                    <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800 text-right">
-                      <Building2 className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                      <span className="truncate max-w-[140px] xl:max-w-[160px]">
-                        {chamado.departamentoDestino?.nome || "—"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium">
-                      Local
-                    </span>
-                    <span className="text-sm font-semibold text-neutral-800 text-right truncate max-w-[160px]">
-                      {chamado.local.nome}
+              <div className="flex flex-col divide-y divide-neutral-200 border-y border-neutral-200 ">
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium">
+                    Solicitante
+                  </span>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800 text-right">
+                    <User className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                    <span className="truncate max-w-[140px] xl:max-w-[160px]">
+                      {chamado.usuarioCriacao?.nome || "Sistema"}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium">
-                      Categoria
-                    </span>
-                    <span className="text-sm font-semibold text-neutral-800 text-right truncate max-w-[160px]">
-                      {chamado.tipo.nome}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium">
-                      Técnico
-                    </span>
-                    <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800 text-right">
-                      <UserCog className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                      <span className="truncate max-w-[140px] xl:max-w-[160px]">
-                        {optTecnicoId === currentUserId
-                          ? "Eu (Você)"
-                          : chamado.tecnico?.nome || (
-                              <span className="text-amber-500 font-normal italic">
-                                Aguardando...
-                              </span>
-                            )}
-                      </span>
-                    </div>
-                    <ColaboradoresManager
-                      chamadoCodigo={chamado.codigo}
-                      tecnicoPrincipalId={optTecnicoId}
-                      colaboradores={chamado.colaboradores || []}
-                      todosUsuarios={usuarios}
-                      podeAdicionar={
-                        isTecnicoPrincipal && optStatus !== "FECHADO"
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium whitespace-nowrap">
-                      Abertura
-                    </span>
-                    <span className="text-xs font-mono text-neutral-700 tabular-nums text-right">
-                      {mounted
-                        ? new Date(chamado.dataCriacao).toLocaleString(
-                            "pt-BR",
-                            { dateStyle: "short", timeStyle: "short" },
-                          )
-                        : "—"}
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium">
+                    Departamento
+                  </span>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800 text-right">
+                    <Building2 className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                    <span className="truncate max-w-[140px] xl:max-w-[160px]">
+                      {chamado.departamentoDestino?.nome || "—"}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-xs text-neutral-500 font-medium whitespace-nowrap">
-                      Vencimento
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium">
+                    Local
+                  </span>
+                  <span className="text-sm font-semibold text-neutral-800 text-right truncate max-w-[160px]">
+                    {chamado.local.nome}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium">
+                    Categoria
+                  </span>
+                  <span className="text-sm font-semibold text-neutral-800 text-right truncate max-w-[160px]">
+                    {chamado.tipo.nome}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium">
+                    Técnico
+                  </span>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800 text-right">
+                    <UserCog className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                    <span className="truncate max-w-[140px] xl:max-w-[160px]">
+                      {optTecnicoId ? (
+                        optTecnicoId === currentUserId ? (
+                          "Eu (Você)"
+                        ) : (
+                          usuarios.find((u) => u.id === optTecnicoId)?.nome ||
+                          chamado.tecnico?.nome
+                        )
+                      ) : (
+                        <span className="text-amber-500 font-normal italic">
+                          Aguardando...
+                        </span>
+                      )}
                     </span>
-                    <span className="text-xs font-mono text-neutral-700 tabular-nums text-right pr-2">
-                      {mounted && chamado.dataVencimento
-                        ? new Date(chamado.dataVencimento).toLocaleString(
-                            "pt-BR",
-                            { dateStyle: "short", timeStyle: "short" },
-                          )
-                        : "—"}
-                    </span>
+                  </div>
+                  <ColaboradoresManager
+                    chamadoCodigo={chamado.codigo}
+                    tecnicoPrincipalId={optTecnicoId}
+                    colaboradores={chamado.colaboradores || []}
+                    todosUsuarios={usuarios}
+                    podeAdicionar={
+                      isTecnicoPrincipal && optStatus !== "FECHADO"
+                    }
+                  />
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium whitespace-nowrap">
+                    Abertura
+                  </span>
+                  <span className="text-xs font-mono text-neutral-700 tabular-nums text-right">
+                    {mounted
+                      ? new Date(chamado.dataCriacao).toLocaleString("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-xs text-neutral-500 font-medium whitespace-nowrap">
+                    Vencimento
+                  </span>
+                  <span className="text-xs font-mono text-neutral-700 tabular-nums text-right pr-2">
+                    {mounted && chamado.dataVencimento
+                      ? new Date(chamado.dataVencimento).toLocaleString(
+                          "pt-BR",
+                          { dateStyle: "short", timeStyle: "short" },
+                        )
+                      : "—"}
+                  </span>
                 </div>
               </div>
             </div>
