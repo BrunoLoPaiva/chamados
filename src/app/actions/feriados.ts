@@ -82,12 +82,13 @@ export async function calcularDataVencimentoSLA(
   return current;
 }
 
-// --- AÇÃO DO BOTÃO "RECALCULAR TUDO" ---
-
 export async function recalcularSLAsGlobais() {
-  // Pega apenas chamados que ainda estão rodando (desconsidera os FECHADOS)
+  // CORREÇÃO: Pega apenas chamados normais.
+  // Ignora os "FECHADO" e ignora os "PENDENTE" (pois os pausados têm uma data limite manual)
   const chamadosAbertos = await prisma.chamado.findMany({
-    where: { status: { not: "FECHADO" } },
+    where: {
+      status: { in: ["SOLICITADO", "EM_ATENDIMENTO"] },
+    },
     include: { tipo: true },
   });
 
