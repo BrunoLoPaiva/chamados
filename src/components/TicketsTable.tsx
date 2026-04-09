@@ -610,14 +610,12 @@ export default function TicketsTable({
                             ) : overdue ? (
                               <span className="text-white bg-red-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {/* {fmtDateShort(c.dataVencimento)} */}
-                                {c.dataVencimento}
+                                {fmtDate(c.dataVencimento)}
                               </span>
                             ) : (
                               <span className="font-bold flex items-center gap-1 text-neutral-600">
                                 <Calendar className="w-3 h-3" />
-                                {/* {fmtDateShort(c.dataVencimento)} */}
-                                {c.dataVencimento}
+                                {fmtDate(c.dataVencimento)}
                               </span>
                             )}
                           </span>
