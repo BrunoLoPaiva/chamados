@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import DeleteButton from "@/components/DeleteButton";
 import { deleteTipoChamado } from "@/app/actions/admin";
+import Swal from "sweetalert2";
 
 export default function TipoSlidePanel({
   tipo,
@@ -96,7 +97,18 @@ export default function TipoSlidePanel({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedDeptos.size === 0) {
-      alert("Selecione pelo menos um departamento.");
+      Swal.fire({
+        title: "Atenção",
+        text: "Selecione pelo menos um departamento.",
+        icon: "warning",
+        confirmButtonColor: "#f59e0b",
+        confirmButtonText: "Ok",
+        customClass: {
+          popup: "rounded-xl shadow-2xl border border-neutral-100",
+          title: "text-xl font-bold text-neutral-900",
+          htmlContainer: "text-sm text-neutral-600",
+        },
+      });
       return;
     }
 
@@ -120,7 +132,18 @@ export default function TipoSlidePanel({
         else await createAction(formData);
         onClose();
       } catch (e) {
-        alert("Erro ao salvar o tipo de chamado.");
+        Swal.fire({
+          title: "Erro",
+          text: "Erro ao salvar o tipo de chamado.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
       }
     });
   };

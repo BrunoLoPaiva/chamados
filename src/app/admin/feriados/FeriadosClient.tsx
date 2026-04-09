@@ -1,4 +1,3 @@
-// src/app/admin/feriados/FeriadosClient.tsx
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -9,6 +8,7 @@ import {
   recalcularSLAsGlobais,
 } from "@/app/actions/feriados";
 import { toast } from "sonner";
+import Swal from "sweetalert2"; // <-- NOVO IMPORT DO SWEETALERT
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MESES = [
@@ -81,12 +81,25 @@ export default function FeriadosClient() {
   };
 
   const handleRecalcularSLAs = async () => {
-    if (
-      !confirm(
-        "Isso irá recalcular o vencimento de TODOS os chamados abertos atualmente usando a regra de feriados e fins de semana. Deseja continuar?",
-      )
-    )
-      return;
+    // <-- SUBSTITUIÇÃO DO CONFIRM PELO SWEETALERT -->
+    const result = await Swal.fire({
+      title: "Recalcular todos os prazos?",
+      text: "Esta ação irá recalcular o vencimento de TODOS os chamados atualmente abertos, aplicando a nova regra de feriados e fins de semana. Deseja continuar?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#0f172a", // Cor azul-escura/navy da marca
+      cancelButtonColor: "#64748b", // Cinza
+      confirmButtonText: "Sim, recalcular SLAs",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true, // Coloca o botão cancelar à esquerda
+      customClass: {
+        popup: "rounded-xl shadow-2xl border border-neutral-100",
+        title: "text-xl font-bold text-neutral-900",
+        htmlContainer: "text-sm text-neutral-600",
+      },
+    });
+
+    if (!result.isConfirmed) return;
 
     setIsRecalculando(true);
     try {

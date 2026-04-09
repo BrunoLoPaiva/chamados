@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { atualizarUsuario, adicionarUsuario } from "@/app/actions/usuarios"; // Importando a sua action
+import Swal from "sweetalert2";
 
 /* Tipagens */
 type Departamento = { id: number; nome: string };
@@ -137,7 +138,18 @@ export default function UsuariosClient({
       try {
         await atualizarUsuario(formData);
       } catch (error: any) {
-        alert(error.message || "Erro ao alterar status do usuário.");
+        Swal.fire({
+          title: "Erro",
+          text: error.message || "Erro ao alterar status do usuário.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
       }
     });
   };
@@ -152,7 +164,18 @@ export default function UsuariosClient({
         await atualizarUsuario(formData);
         setEditingUser(null); // Fecha o modal com sucesso
       } catch (error: any) {
-        alert(error.message || "Erro ao salvar usuário.");
+        Swal.fire({
+          title: "Erro",
+          text: error.message || "Erro ao salvar usuário.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
       }
     });
   };
@@ -167,7 +190,18 @@ export default function UsuariosClient({
         await adicionarUsuario(formData);
         setIsCreatingUser(false); // Fecha o modal com sucesso
       } catch (error: any) {
-        alert(error.message || "Erro ao criar usuário.");
+        Swal.fire({
+          title: "Erro",
+          text: error.message || "Erro ao criar usuário.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
       }
     });
   };

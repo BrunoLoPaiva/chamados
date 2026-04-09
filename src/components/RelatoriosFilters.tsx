@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { Search, Filter, X, Calendar } from "lucide-react";
+import Swal from "sweetalert2";
 
 export default function RelatoriosFilters({
   departamentos,
@@ -33,7 +34,18 @@ export default function RelatoriosFilters({
   const handleApply = useCallback(() => {
     if (dataInicio && dataFim) {
       if (new Date(dataInicio) > new Date(dataFim)) {
-        alert("A data inicial não pode ser superior à data final.");
+        Swal.fire({
+          title: "Atenção",
+          text: "A data inicial não pode ser superior à data final.",
+          icon: "warning",
+          confirmButtonColor: "#f59e0b",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
         return;
       }
     }

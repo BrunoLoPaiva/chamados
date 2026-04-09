@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { X } from "lucide-react";
 import DeleteButton from "@/components/DeleteButton";
 import { deletePreventivaAdmin } from "@/app/actions/admin";
+import Swal from "sweetalert2";
 
 export default function PreventivaSlidePanel({
   preventiva,
@@ -78,7 +79,18 @@ export default function PreventivaSlidePanel({
         else await createAction(formData);
         onClose();
       } catch (error) {
-        alert("Erro ao salvar a preventiva.");
+        Swal.fire({
+          title: "Erro",
+          text: "Erro ao salvar a preventiva.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
       }
     });
   };

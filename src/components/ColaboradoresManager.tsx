@@ -4,6 +4,7 @@
 import { useState, useTransition } from "react";
 import { Users, Plus, Check, X } from "lucide-react";
 import { adicionarColaborador } from "@/app/actions/tickets";
+import Swal from "sweetalert2";
 
 interface UsuarioList {
   id: number;
@@ -43,7 +44,18 @@ export default function ColaboradoresManager({
         setIsAdding(false);
         setSelectedUserId("");
       } catch (error) {
-        alert("Erro ao adicionar colaborador. Tente novamente.");
+        Swal.fire({
+          title: "Erro",
+          text: "Erro ao adicionar colaborador. Tente novamente.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+          confirmButtonText: "Ok",
+          customClass: {
+            popup: "rounded-xl shadow-2xl border border-neutral-100",
+            title: "text-xl font-bold text-neutral-900",
+            htmlContainer: "text-sm text-neutral-600",
+          },
+        });
       }
     });
   };

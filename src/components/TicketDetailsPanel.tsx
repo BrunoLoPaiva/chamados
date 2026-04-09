@@ -25,6 +25,8 @@ import {
   retomarChamado,
 } from "@/app/actions/tickets";
 import TicketTimeline from "./TicketTimeline";
+import { toast } from "sonner"; // <-- Adicionado para os alertas sutis
+import Swal from "sweetalert2"; // <-- Adicionado para a confirmação de exclusão
 
 type ChamadoCompleto = {
   id: number;
@@ -73,12 +75,10 @@ export default function TicketDetailsPanel({
   const [optStatus, setOptStatus] = useOptimistic(chamado.status);
   const [optTecnicoId, setOptTecnicoId] = useOptimistic(chamado.tecnicoId);
 
-  // Estados do Formulário de Pausa
   const [isPausarOpen, setIsPausarOpen] = useState(false);
   const [pausarJustificativa, setPausarJustificativa] = useState("");
   const [pausarDataLimite, setPausarDataLimite] = useState("");
 
-  // Estados do Formulário de Atribuição (NOVO)
   const [isAtribuirOpen, setIsAtribuirOpen] = useState(false);
   const [atribuirTecnicoId, setAtribuirTecnicoId] = useState("");
 
@@ -93,7 +93,7 @@ export default function TicketDetailsPanel({
 
   const handleAtribuirSubmit = () => {
     if (!atribuirTecnicoId) {
-      alert("Por favor, selecione um técnico.");
+      toast.error("Por favor, selecione um técnico.");
       return;
     }
     const tecId = Number(atribuirTecnicoId);
@@ -108,15 +108,16 @@ export default function TicketDetailsPanel({
         await atribuirChamado(formData);
         setIsAtribuirOpen(false);
         setAtribuirTecnicoId("");
+        toast.success("Técnico atribuído com sucesso!");
       } catch (error) {
-        alert("Erro ao atribuir chamado.");
+        toast.error("Erro ao atribuir chamado.");
       }
     });
   };
 
   const handlePausarSubmit = () => {
     if (!pausarJustificativa.trim() || !pausarDataLimite) {
-      alert("Preencha a justificativa e a data limite para pausar.");
+      toast.warning("Preencha a justificativa e a data limite para pausar.");
       return;
     }
     setOptStatus("PENDENTE");
@@ -130,8 +131,9 @@ export default function TicketDetailsPanel({
         setIsPausarOpen(false);
         setPausarJustificativa("");
         setPausarDataLimite("");
+        toast.success("Chamado pausado!");
       } catch (error: any) {
-        alert(error.message || "Erro ao pausar chamado.");
+        toast.error(error.message || "Erro ao pausar chamado.");
       }
     });
   };
@@ -141,8 +143,9 @@ export default function TicketDetailsPanel({
     startTransition(async () => {
       try {
         await retomarChamado(chamado.codigo);
+        toast.success("Atendimento retomado!");
       } catch (error: any) {
-        alert(error.message || "Erro ao retomar chamado.");
+        toast.error(error.message || "Erro ao retomar chamado.");
       }
     });
   };
@@ -155,15 +158,34 @@ export default function TicketDetailsPanel({
     optStatus === "EM_ATENDIMENTO" &&
     (isTecnicoPrincipal || isColaborador || isAdmin);
 
-  const handleExcluirChamado = () => {
-    if (!confirm("Tem certeza ABSOLUTA que deseja excluir este chamado?"))
-      return;
+  const handleExcluirChamado = async () => {
+    // Substituindo o confirm nativo pelo SweetAlert2
+    const result = await Swal.fire({
+      title: "Tem certeza?",
+      text: "Você está prestes a excluir este chamado definitivamente. Esta ação não pode ser desfeita!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626", // Vermelho (red-600)
+      cancelButtonColor: "#64748b", // Cinza (slate-500)
+      confirmButtonText: "Sim, excluir chamado!",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true, // Coloca o botão de cancelar na esquerda (melhor UX)
+      customClass: {
+        popup: "rounded-xl shadow-2xl border border-neutral-100",
+        title: "text-xl font-bold text-neutral-900",
+        htmlContainer: "text-sm text-neutral-600",
+      },
+    });
+
+    if (!result.isConfirmed) return;
+
     startTransition(async () => {
       try {
         await excluirChamado(chamado.codigo);
+        toast.success("Chamado excluído com sucesso.");
         closePanel();
       } catch (error: any) {
-        alert(error.message || "Erro ao excluir o chamado.");
+        toast.error(error.message || "Erro ao excluir o chamado.");
       }
     });
   };
@@ -174,7 +196,7 @@ export default function TicketDetailsPanel({
         <div className="flex items-center gap-2">
           {/* Tag Prioridade */}
           <span
-            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase transition-colors ${chamado.tipo.prioridade === "Alta" ? "bg-red-600 text-white   border border-red-700 shadow-sm" : chamado.tipo.prioridade === "Media" ? "bg-brand-yellow text-white   border border-brand-yellow shadow-sm" : "bg-neutral-100 text-neutral-700   border border-neutral-200 "}`}
+            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase transition-colors ${chamado.tipo.prioridade === "Alta" ? "bg-red-600 text-white border border-red-700 shadow-sm" : chamado.tipo.prioridade === "Media" ? "bg-brand-yellow text-white border border-brand-yellow shadow-sm" : "bg-neutral-100 text-neutral-700 border border-neutral-200"}`}
           >
             {chamado.tipo.prioridade}
           </span>
@@ -209,13 +231,13 @@ export default function TicketDetailsPanel({
       <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
         <div className="flex flex-col lg:flex-row min-h-full min-w-0">
           <div className="flex-1 p-5 lg:border-r border-neutral-100 min-w-0">
-            <h2 className="text-2xl font-bold text-neutral-900 0 mb-6 leading-snug break-words">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-6 leading-snug break-words">
               {chamado.titulo}
             </h2>
             <h3 className="text-xs font-bold text-neutral-900 mb-2 uppercase tracking-wider">
               Descrição
             </h3>
-            <div className="text-sm text-neutral-700 bg-neutral-50 /30 p-4 rounded-md border border-neutral-100 mb-6 leading-relaxed">
+            <div className="text-sm text-neutral-700 bg-neutral-50 p-4 rounded-md border border-neutral-100 mb-6 leading-relaxed">
               {(chamado.descricao || "")
                 .split("\n")
                 .map((linha: string, i: number) => (
@@ -414,7 +436,7 @@ export default function TicketDetailsPanel({
                         className="flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold text-red-600 bg-white border border-red-200 rounded-lg md:rounded-md shadow-md md:shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50"
                       >
                         <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
-                        Excluir
+                        Excluir Definitivamente
                       </button>
                     </div>
                   )}
