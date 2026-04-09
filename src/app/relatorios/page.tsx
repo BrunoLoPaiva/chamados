@@ -2,13 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { startOfMonth, endOfMonth, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Suspense } from "react";
-import { BarChart3, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
-import ExportCSVButton from "@/components/ExportCSVButton";
 import RelatoriosFilters from "@/components/RelatoriosFilters";
+import RelatoriosClientView from "./RelatoriosClientView"; // <-- IMPORT CORRETO DA VERSÃO COM ABAS
 
 export default async function RelatoriosPage({
   searchParams,
@@ -32,11 +30,9 @@ export default async function RelatoriosPage({
   const meusDeptosIds =
     usuarioLogado?.departamentos.map((d: any) => d.id) || [];
 
-  if (!isAdmin && !isDeptoAdmin) {
-    redirect("/dashboard");
-  }
+  if (!isAdmin && !isDeptoAdmin) redirect("/dashboard");
 
-  // Listas auxiliares para os filtros (Somente ativos para o form)
+  // Listas auxiliares para os filtros
   const [departamentosAtivos, tecnicosAtivos] = await Promise.all([
     prisma.departamento.findMany({ orderBy: { nome: "asc" } }),
     prisma.usuario.findMany({
@@ -55,8 +51,6 @@ export default async function RelatoriosPage({
 
   const inicioMes = pInicio ? parseISO(pInicio) : startOfMonth(new Date());
   const fimMes = pFim ? parseISO(pFim) : endOfMonth(new Date());
-
-  // Ajuste do final do dia para contemplar o dia útil passado na UI
   fimMes.setHours(23, 59, 59, 999);
 
   const filterWhere: Record<string, unknown> = {
@@ -74,69 +68,92 @@ export default async function RelatoriosPage({
     format(inicioMes, "MMMM 'de' yyyy", { locale: ptBR }) +
     (pFim ? ` até ${format(fimMes, "dd/MM/yyyy")}` : "");
 
-  type ChamadoComplete = {
-    id: number;
-    codigo: string;
-    status: string;
-    dataCriacao: Date;
-    dataAtendimento: Date | null;
-    dataVencimento: Date | null;
-    usuarioCriacao: { nome: string } | null;
-    tecnico: { nome: string } | null;
-    departamentoDestino: { nome: string } | null;
-    tipo: { nome: string; prioridade: string } | null;
-  };
-
-  const chamadosResult = await prisma.chamado.findMany({
-    where: filterWhere as any, // Prisma typed where query workaround for dynamic keys
+  const chamados = await prisma.chamado.findMany({
+    where: filterWhere as any,
     include: {
       tipo: true,
       tecnico: true,
       usuarioCriacao: true,
       departamentoDestino: true,
+      local: true,
     },
     orderBy: { dataCriacao: "desc" },
   });
 
-  const chamados = chamadosResult as unknown as ChamadoComplete[];
+  // --- LÓGICA DE BI ---
+  const countTecnicos: Record<string, number> = {};
+  const countLocais: Record<string, number> = {};
+  const countSolicitantes: Record<string, number> = {};
+  const countTipos: Record<string, number> = {};
 
-  // Cálculos de KPIs
+  chamados.forEach((c) => {
+    const tecnico = c.tecnico?.nome || "Aguardando Atribuição";
+    countTecnicos[tecnico] = (countTecnicos[tecnico] || 0) + 1;
+
+    const local = c.local?.nome || "Desconhecido";
+    countLocais[local] = (countLocais[local] || 0) + 1;
+
+    const solicitante = c.usuarioCriacao?.nome || "Sistema";
+    countSolicitantes[solicitante] = (countSolicitantes[solicitante] || 0) + 1;
+
+    const tipo = c.tipo?.nome || "Não classificado";
+    countTipos[tipo] = (countTipos[tipo] || 0) + 1;
+  });
+
+  const formatChartData = (record: Record<string, number>, limit: number = 5) =>
+    Object.entries(record)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, limit);
+
+  const chartData = {
+    tecnicos: formatChartData(countTecnicos, 5),
+    locais: formatChartData(countLocais, 5),
+    solicitantes: formatChartData(countSolicitantes, 5),
+    tipos: formatChartData(countTipos, 8),
+  };
+
+  // --- CÁLCULOS DE KPIS ---
   const total = chamados.length;
-  const fechados = chamados.filter(
-    (c: ChamadoComplete) => c.status === "FECHADO",
-  );
+  const fechados = chamados.filter((c: any) => c.status === "FECHADO");
   const abertos = total - fechados.length;
+  const fechadosComData = fechados.filter((c: any) => c.dataAtendimento);
 
-  const fechadosComData = fechados.filter(
-    (c: ChamadoComplete) => c.dataAtendimento,
-  );
-
-  // TMA (Tempo Médio de Atendimento) em Horas
   const somaTMA = fechadosComData.reduce(
-    (acc: number, c: ChamadoComplete) =>
-      acc + (c.dataAtendimento!.getTime() - c.dataCriacao.getTime()),
+    (acc: number, c: any) =>
+      acc + (c.dataAtendimento.getTime() - c.dataCriacao.getTime()),
     0,
   );
   const tmaMs = fechadosComData.length ? somaTMA / fechadosComData.length : 0;
   const tmaHoras = (tmaMs / (1000 * 60 * 60)).toFixed(1);
 
-  // SLA Violado
   const slaNoPrazo = fechadosComData.filter(
-    (c: ChamadoComplete) =>
-      !c.dataVencimento || c.dataAtendimento! <= c.dataVencimento,
+    (c: any) => !c.dataVencimento || c.dataAtendimento <= c.dataVencimento,
   ).length;
   const slaPorcentagem = fechadosComData.length
     ? Math.round((slaNoPrazo / fechadosComData.length) * 100)
     : 100;
+  const resolvidosPerc =
+    total > 0 ? Math.round((fechados.length / total) * 100) : 0;
 
-  // Preparando dados para Exportação
-  const exportData = chamados.map((c: ChamadoComplete) => ({
+  const kpis = {
+    total,
+    resolvidosPerc,
+    abertos,
+    fechados: fechados.length,
+    tmaHoras,
+    slaPerc: slaPorcentagem,
+  };
+
+  // --- EXPORT DATA ---
+  const exportData = chamados.map((c: any) => ({
     codigo: c.codigo,
     status: c.status,
     dataCriacao: c.dataCriacao,
     usuarioCriacao: c.usuarioCriacao?.nome || "Sistema",
     tecnico: c.tecnico?.nome || "Não atribuído",
     departamento: c.departamentoDestino?.nome || "Desconhecido",
+    local: c.local?.nome || "Desconhecido",
     tipo: c.tipo?.nome || "Outros",
     prioridade: c.tipo?.prioridade || "Média",
     dataAtendimento: c.dataAtendimento,
@@ -144,20 +161,24 @@ export default async function RelatoriosPage({
   }));
 
   return (
-    <div className="min-h-screen bg-neutral-50 50 p-6 md:p-12 transition-colors">
+    <div className="min-h-screen bg-neutral-50 p-6 md:p-12 transition-colors">
       <div className="max-w-6xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900 0 tracking-tight">
+            <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">
               Relatórios e Métricas
             </h1>
-            <p className="text-neutral-500  mt-1 capitalize">
+            <p className="text-neutral-500 mt-1 capitalize">
               Visão consolidada: {mesAtualNome}
             </p>
           </div>
         </header>
 
-        <Suspense fallback={<div className="h-16 bg-neutral-100 animate-pulse rounded-lg mb-6"></div>}>
+        <Suspense
+          fallback={
+            <div className="h-16 bg-neutral-100 animate-pulse rounded-lg mb-6"></div>
+          }
+        >
           <RelatoriosFilters
             departamentos={departamentosAtivos.map((d) => ({
               id: d.id,
@@ -167,204 +188,14 @@ export default async function RelatoriosPage({
           />
         </Suspense>
 
-        {/* KPIs Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-          <div className="bg-white  p-6 rounded-lg border border-neutral-200  shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-brand-navy/10  text-brand-navy  rounded-md">
-                <BarChart3 className="w-6 h-6" />
-              </div>
-            </div>
-            <h3 className="text-neutral-500  text-sm font-medium">
-              Total de Chamados
-            </h3>
-            <p className="text-3xl font-bold text-neutral-900 0 mt-1">
-              {total}
-            </p>
-            <p className="text-xs text-neutral-400 mt-2">
-              {abertos} pendentes / {fechados.length} concluídos
-            </p>
-          </div>
-
-          <div className="bg-white  p-6 rounded-lg border border-neutral-200  shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-brand-green/10  text-brand-green  rounded-md">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-            </div>
-            <h3 className="text-neutral-500  text-sm font-medium">
-              Resolvidos
-            </h3>
-            <p className="text-3xl font-bold text-neutral-900 0 mt-1">
-              {total > 0 ? Math.round((fechados.length / total) * 100) : 0}%
-            </p>
-            <p className="text-xs text-neutral-400 mt-2">
-              Taxa de resolução no mês
-            </p>
-          </div>
-
-          <div className="bg-white  p-6 rounded-lg border border-neutral-200  shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-brand-yellow/10  text-brand-yellow  rounded-md">
-                <Clock className="w-6 h-6" />
-              </div>
-            </div>
-            <h3 className="text-neutral-500  text-sm font-medium">
-              Tempo Médio de Atendimento
-            </h3>
-            <p className="text-3xl font-bold text-neutral-900 0 mt-1">
-              {tmaHoras}h
-            </p>
-            <p className="text-xs text-neutral-400 mt-2">
-              Tempo da abertura até a solução
-            </p>
-          </div>
-
-          <div className="bg-white  p-6 rounded-lg border border-neutral-200  shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div
-                className={`p-3 rounded-md ${slaPorcentagem >= 80 ? "bg-emerald-50 text-emerald-600  " : "bg-red-50 text-red-600  "}`}
-              >
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-            </div>
-            <h3 className="text-neutral-500  text-sm font-medium">
-              SLA no Prazo
-            </h3>
-            <p className="text-3xl font-bold text-neutral-900 0 mt-1">
-              {slaPorcentagem}%
-            </p>
-            <p className="text-xs text-neutral-400 mt-2">
-              Atendimentos dentro do prazo
-            </p>
-          </div>
-        </div>
-
-        {/* Detalhamento e Listagem */}
-        <div className="bg-white  rounded-lg border border-neutral-200  p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-neutral-900 0">
-              Volume do Mês Atual
-            </h2>
-            <ExportCSVButton data={exportData} mes={mesAtualNome} />
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-neutral-500  uppercase bg-neutral-50 /50">
-                <tr>
-                  <th className="px-4 py-3 font-semibold rounded-tl-lg">ID</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Abertura</th>
-                  <th className="px-4 py-3 font-semibold">Solicitante</th>
-                  <th className="px-4 py-3 font-semibold">Técnico</th>
-                  <th className="px-4 py-3 font-semibold">TMA (Horas)</th>
-                  <th className="px-4 py-3 font-semibold rounded-tr-lg">
-                    Prioridade / SLA
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {chamados.slice(0, 50).map((c) => {
-                  const resolucao = c.dataAtendimento
-                    ? (c.dataAtendimento.getTime() - c.dataCriacao.getTime()) /
-                      (1000 * 60 * 60)
-                    : null;
-                  const violouSla =
-                    c.dataVencimento && c.dataAtendimento
-                      ? c.dataAtendimento > c.dataVencimento
-                      : false;
-
-                  return (
-                    <tr
-                      key={c.id}
-                      className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors group cursor-pointer"
-                    >
-                      <td className="p-0">
-                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3 font-mono text-brand-navy font-bold group-hover:underline">
-                          #{c.codigo}
-                        </Link>
-                      </td>
-                      <td className="p-0">
-                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-bold ${c.status === "FECHADO" ? "bg-neutral-100 text-neutral-600" : "bg-blue-50 text-blue-600"}`}
-                          >
-                            {c.status.replace("_", " ")}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="p-0 text-neutral-700">
-                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3">
-                          {format(c.dataCriacao, "dd 'de' MMM, HH:mm", {
-                            locale: ptBR,
-                          })}
-                        </Link>
-                      </td>
-                      <td
-                        className="p-0 text-neutral-700 max-w-[150px]"
-                        title={c.usuarioCriacao?.nome}
-                      >
-                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3 truncate">
-                          {c.usuarioCriacao?.nome || "Sistema"}
-                        </Link>
-                      </td>
-                      <td className="p-0 text-neutral-700 max-w-[150px]">
-                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3 truncate">
-                          {c.tecnico?.nome || "-"}
-                        </Link>
-                      </td>
-                      <td className="p-0 text-neutral-700">
-                        <Link href={`/chamado/${c.codigo}`} className="block px-4 py-3">
-                          {resolucao !== null ? (
-                            <span className="font-mono">
-                              {resolucao.toFixed(1)}h
-                            </span>
-                          ) : (
-                            <span className="text-neutral-400">-</span>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="p-0">
-                        <Link href={`/chamado/${c.codigo}`} className="flex items-center gap-2 px-4 py-3">
-                          <span className="text-xs uppercase font-bold text-neutral-600">
-                            {c.tipo?.prioridade || "Média"}
-                          </span>
-                          {c.status === "FECHADO" &&
-                            c.dataVencimento &&
-                            (violouSla ? (
-                              <span
-                                className="w-2 h-2 rounded-full bg-red-500 shrink-0"
-                                title="Violou SLA"
-                              ></span>
-                            ) : (
-                              <span
-                                className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"
-                                title="No Prazo"
-                              ></span>
-                            ))}
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {chamados.length === 0 && (
-              <div className="text-center py-12 text-neutral-500 ">
-                Nenhum chamado registrado neste período.
-              </div>
-            )}
-
-            {chamados.length > 50 && (
-              <div className="text-center py-4 border-t border-neutral-100  text-xs text-neutral-500">
-                Exibindo os últimos 50 registros do mês. Exporte para CSV para
-                ver todos.
-              </div>
-            )}
-          </div>
-        </div>
+        {/* --- INJETANDO O CLIENT VIEW COM ABAS --- */}
+        <RelatoriosClientView
+          kpis={kpis}
+          charts={chartData}
+          chamados={chamados}
+          exportData={exportData}
+          mesAtualNome={mesAtualNome}
+        />
       </div>
     </div>
   );
