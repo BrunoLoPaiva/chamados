@@ -605,7 +605,7 @@ export default function TicketsTable({
                             ) : c.status === "FECHADO" ? (
                               <span className="text-brand-green font-bold flex items-center gap-1">
                                 <CheckCheck className="w-3 h-3" />
-                                {fmtDateShort(c.dataAtendimento)}
+                                {fmtDate(c.dataAtendimento)}
                               </span>
                             ) : overdue ? (
                               <span className="text-white bg-red-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
@@ -710,7 +710,7 @@ export default function TicketsTable({
                     ) : c.status === "FECHADO" ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-brand-green bg-brand-green/5 border border-brand-green/10 shadow-sm">
                         <CheckCheck className="w-3.5 h-3.5" />{" "}
-                        {fmtDateShort(c.dataAtendimento)}
+                        {fmtDate(c.dataAtendimento)}
                       </span>
                     ) : overdue ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-red-600 shadow-md animate-pulse border border-red-700">
