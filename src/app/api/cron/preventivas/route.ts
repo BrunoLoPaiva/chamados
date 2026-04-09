@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { gerarCodigoChamado } from "@/app/actions/tickets";
+import { calcularDataVencimentoSLA } from "@/app/actions/feriados"; // <-- NOVA IMPORTAÇÃO
 
 export const dynamic = "force-dynamic";
 
@@ -21,17 +22,14 @@ export async function GET(request: Request) {
     let processedCount = 0;
     const errors = [];
 
-    // 1. Busca um usuário criador válido de forma segura
     let sistemaUser = await prisma.usuario.findFirst({
       where: { login: "sistema" },
     });
 
-    // Se não existir o usuário "sistema", pega o primeiro usuário ativo do banco
     if (!sistemaUser) {
       sistemaUser = await prisma.usuario.findFirst({ where: { ativo: true } });
     }
 
-    // Se o banco estiver literalmente vazio de usuários (impossível se você está logado, mas previne erros)
     if (!sistemaUser) {
       return NextResponse.json(
         { error: "Nenhum usuário válido encontrado para criar o chamado." },
@@ -41,7 +39,6 @@ export async function GET(request: Request) {
 
     const criadorId = sistemaUser.id;
 
-    // 2. Loop passando por cada preventiva isoladamente
     for (const prev of preventivasParaRodar) {
       try {
         await prisma.$transaction(async (tx: any) => {
@@ -53,10 +50,13 @@ export async function GET(request: Request) {
           }
 
           const horas = prev.tipo?.tempoSlaHoras || 24;
-          const dataVencimento = new Date();
-          dataVencimento.setHours(dataVencimento.getHours() + horas);
 
-          // Cria o chamado (Se der erro de FK, cai no catch local e NÃO quebra o resto)
+          // <-- NOVA REGRA INTELIGENTE APLICADA AQUI
+          const dataVencimento = await calcularDataVencimentoSLA(
+            new Date(),
+            horas,
+          );
+
           const ticket = await tx.chamado.create({
             data: {
               codigo,
@@ -72,7 +72,6 @@ export async function GET(request: Request) {
             },
           });
 
-          // Copia ações padrão
           const acoesPadrao = await tx.acao.findMany({
             where: { tipoId: prev.tipoId, ativo: true },
           });
@@ -86,7 +85,6 @@ export async function GET(request: Request) {
             });
           }
 
-          // Atualiza a data para a próxima execução
           const novaData = new Date(prev.proximaExecucao);
           novaData.setDate(novaData.getDate() + prev.frequenciaDias);
 
@@ -98,7 +96,6 @@ export async function GET(request: Request) {
           processedCount++;
         });
       } catch (innerError: any) {
-        // Se UMA preventiva der erro, logamos ela e o loop continua para a próxima!
         console.error(`Falha na Preventiva ID ${prev.id}:`, innerError.message);
         errors.push({
           preventivaId: prev.id,
@@ -108,7 +105,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Retorna o sucesso e a lista das que falharam
     return NextResponse.json({
       processed: processedCount,
       failed: errors.length,

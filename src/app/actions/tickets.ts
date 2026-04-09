@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { calcularDataVencimentoSLA } from "@/app/actions/feriados"; // <-- NOVA IMPORTAÇÃO
 
 export async function gerarCodigoChamado() {
   return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }
 
 export async function createTicket(formData: FormData) {
-  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user || !(session.user as any).id)
     throw new Error("Usuário não autenticado");
@@ -68,8 +68,9 @@ export async function createTicket(formData: FormData) {
 
   const tipo = await prisma.tipoChamado.findUnique({ where: { id: tipoId } });
   const horas = tipo?.tempoSlaHoras || 24;
-  const dataVencimento = new Date();
-  dataVencimento.setHours(dataVencimento.getHours() + horas);
+
+  // <-- NOVA REGRA INTELIGENTE APLICADA AQUI
+  const dataVencimento = await calcularDataVencimentoSLA(new Date(), horas);
 
   let codigo = await gerarCodigoChamado();
   let existe = await prisma.chamado.findUnique({ where: { codigo } });
@@ -200,7 +201,6 @@ export async function fecharChamado(formData: FormData) {
   const anexoFile = formData.get("anexo") as File | null;
   let anexoData = null;
 
-  // CORREÇÃO: Check restrito que ignora strings e garante tipagem do File.
   if (
     anexoFile &&
     typeof anexoFile === "object" &&
@@ -307,7 +307,6 @@ export async function pausarChamado(formData: FormData) {
   if (!ticket) throw new Error("Chamado não encontrado");
 
   const userId = Number((session.user as any).id);
-  // Atualiza também o SLA (dataVencimento) com o prazo da pausa
   const novaDataVencimento = new Date(`${dataLimiteStr}T23:59:59.999Z`);
   const textoInteracao = `[CHAMADO PAUSADO]\nJustificativa: ${justificativa}\nNovo SLA (Retorno): ${novaDataVencimento.toLocaleDateString("pt-BR")}`;
 
@@ -361,7 +360,6 @@ export async function retomarChamado(codigo: string) {
 }
 
 export async function bulkAtribuir(ids: number[], tecnicoAlvoId: number) {
-  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
   if (!ids || ids.length === 0) return;
@@ -410,7 +408,6 @@ export async function bulkUpdateStatus(ids: number[], status: string) {
     );
   }
 
-  // NOVA TRAVA: Bloqueia a pausa via ação em massa
   if (status === "PENDENTE") {
     throw new Error(
       "Para pausar chamados, acesse-os individualmente para fornecer a justificativa obrigatória.",
@@ -428,7 +425,6 @@ export async function bulkUpdateStatus(ids: number[], status: string) {
 }
 
 export async function bulkEncerrar(ids: number[], solucao: string) {
-  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
   if (!ids || ids.length === 0) return;
@@ -472,7 +468,6 @@ export async function bulkEncerrar(ids: number[], solucao: string) {
 }
 
 export async function excluirChamado(codigo: string) {
-  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
 
@@ -504,7 +499,6 @@ export async function adicionarColaborador(
   codigo: string,
   novoTecnicoId: number,
 ) {
-  // ... MANTÉM IGUAL AO ORIGINAL ...
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Usuário não autenticado");
 
