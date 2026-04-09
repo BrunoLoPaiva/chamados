@@ -15,6 +15,7 @@ import {
   LogOut,
   X,
   CalendarClock,
+  CalendarDays, // <-- NOVO ÍCONE IMPORTADO AQUI
 } from "lucide-react";
 
 export default function Sidebar({
@@ -51,6 +52,12 @@ export default function Sidebar({
           href: "/admin/preventivas",
           icon: CalendarClock,
         },
+        // --- NOVO LINK AQUI (Admin Global) ---
+        {
+          name: "Calendário",
+          href: "/admin/feriados",
+          icon: CalendarDays,
+        },
         { name: "Usuários", href: "/admin/usuarios", icon: Users },
         {
           name: "Departamentos",
@@ -66,6 +73,12 @@ export default function Sidebar({
             name: "Preventivas",
             href: "/admin/preventivas",
             icon: CalendarClock,
+          },
+          // --- NOVO LINK AQUI (Admin de Depto) ---
+          {
+            name: "Feriados",
+            href: "/admin/feriados",
+            icon: CalendarDays,
           },
           { name: "Usuários", href: "/admin/usuarios", icon: Users },
           { name: "Locais", href: "/admin/locais", icon: MapPin },
@@ -83,7 +96,7 @@ export default function Sidebar({
         <Link
           key={link.href}
           href={link.href}
-          onClick={onClose} // <-- CORREÇÃO: Isso garante que o menu feche ao clicar no mobile
+          onClick={onClose}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
             isActive
               ? "bg-white/10 text-brand-yellow font-bold border-l-4 border-brand-yellow pl-2"

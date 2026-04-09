@@ -414,7 +414,7 @@ export default function TicketDetailsPanel({
                         className="flex items-center justify-center gap-2 w-full py-3 md:py-2 text-sm font-bold text-red-600 bg-white border border-red-200 rounded-lg md:rounded-md shadow-md md:shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50"
                       >
                         <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
-                        Excluir Definitivamente
+                        Excluir
                       </button>
                     </div>
                   )}

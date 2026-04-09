@@ -169,3 +169,12 @@ model Interacao {
   chamado   Chamado  @relation(fields: [chamadoId], references: [id])
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
 }
+
+model Feriado {
+  id        Int      @id @default(autoincrement())
+  data      DateTime @unique
+  descricao String?
+  ativo     Boolean  @default(true)
+
+  @@map("feriados")
+}
