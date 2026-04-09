@@ -167,10 +167,10 @@ export default function DashboardFilters({
           >
             <option value="">Abertos (Padrão)</option>
             <option value="ALL">Todos (Incluindo Fechados)</option>
-            <option value="SOLICITADO">Apenas Solicitado</option>
-            <option value="EM_ATENDIMENTO">Apenas Em Atendimento</option>
-            <option value="PENDENTE">Apenas Pendente</option>
-            <option value="FECHADO">Apenas Fechado</option>
+            <option value="SOLICITADO">Sem técnico</option>
+            <option value="EM_ATENDIMENTO">Em Atendimento</option>
+            <option value="PENDENTE">Pendente</option>
+            <option value="FECHADO">Fechado</option>
           </select>
         </div>
         <div>

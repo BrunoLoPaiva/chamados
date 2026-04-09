@@ -39,11 +39,15 @@ export default function RelatoriosFilters({
     }
 
     const params = new URLSearchParams(searchParams.toString());
-    
-    if (dataInicio) params.set("inicio", dataInicio); else params.delete("inicio");
-    if (dataFim) params.set("fim", dataFim); else params.delete("fim");
-    if (deptoId) params.set("depto", deptoId); else params.delete("depto");
-    if (tecnicoId) params.set("tecnico", tecnicoId); else params.delete("tecnico");
+
+    if (dataInicio) params.set("inicio", dataInicio);
+    else params.delete("inicio");
+    if (dataFim) params.set("fim", dataFim);
+    else params.delete("fim");
+    if (deptoId) params.set("depto", deptoId);
+    else params.delete("depto");
+    if (tecnicoId) params.set("tecnico", tecnicoId);
+    else params.delete("tecnico");
 
     router.push(`/relatorios?${params.toString()}`);
   }, [dataInicio, dataFim, deptoId, tecnicoId, router, searchParams]);
